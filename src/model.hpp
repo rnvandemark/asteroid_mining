@@ -1,6 +1,7 @@
 #pragma once
 
 #include "asteroid.hpp"
+#include "math.hpp"
 #include "progressable_i.hpp"
 #include "siphon.hpp"
 
@@ -15,6 +16,12 @@ public:
     {
     }
 
+    virtual void progress_over(const double dt) override
+    {
+        siphon.progress_over(dt);
+        asteroid.progress_over(dt);
+    }
+
     const Asteroid& get_asteroid() const
     {
         return asteroid;
@@ -24,10 +31,23 @@ public:
         return siphon;
     }
 
-    virtual void progress_over(const double dt) override
+    easy3d::vec3 calculate_asteroid_effective_potential_cartesian_partials(const easy3d::vec3& position) const
     {
-        siphon.progress_over(dt);
-        asteroid.progress_over(dt);
+        return calculate_effective_potential_cartesian_partials(
+            asteroid.beta,
+            asteroid.gamma,
+            asteroid.omega,
+            position.x,
+            position.y,
+            position.z,
+            calculate_confocal_ellipsoid_surface(
+                asteroid.beta,
+                asteroid.gamma,
+                position.x,
+                position.y,
+                position.z
+            )
+        );
     }
 
 protected:

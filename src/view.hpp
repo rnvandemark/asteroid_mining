@@ -1,7 +1,6 @@
 #pragma once
 
 #include "dimensions_scaler.hpp"
-#include "math.hpp"
 #include "model.hpp"
 
 #include <easy3d/algo/surface_mesh_factory.h>
@@ -474,21 +473,7 @@ protected:
             for (std::size_t i = 0; i < gravity_gradient_marker_meshes.size(); i++)
             {
                 const auto marker_p__asteroid = q__asteroid__universe.rotate(gravity_gradient_marker_meshes[i].position);
-                gravity_gradients[i] = calculate_effective_potential_cartesian_partials(
-                    asteroid.beta,
-                    asteroid.gamma,
-                    asteroid.omega,
-                    marker_p__asteroid.x,
-                    marker_p__asteroid.y,
-                    marker_p__asteroid.z,
-                    calculate_confocal_ellipsoid_surface(
-                        asteroid.beta,
-                        asteroid.gamma,
-                        marker_p__asteroid.x,
-                        marker_p__asteroid.y,
-                        marker_p__asteroid.z
-                    )
-                );
+                gravity_gradients[i] = model.calculate_asteroid_effective_potential_cartesian_partials(marker_p__asteroid);
                 gravity_gradient_magnitudes[i] = gravity_gradients[i].length();
             }
 
