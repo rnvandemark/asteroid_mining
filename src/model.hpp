@@ -1,16 +1,17 @@
 #pragma once
 
 #include "asteroid.hpp"
+#include "progressable_i.hpp"
 #include "siphon.hpp"
 
 namespace am {
 
-class Model
+class Model : public ProgressableI
 {
 public:
-    Model(Asteroid& asteroid_/*, Siphon& siphon_*/):
-        asteroid(asteroid_)/*,
-        siphon(siphon_)*/
+    Model(Asteroid& asteroid_, Siphon& siphon_):
+        asteroid(asteroid_),
+        siphon(siphon_)
     {
     }
 
@@ -18,15 +19,20 @@ public:
     {
         return asteroid;
     }
-
-    void update(const double dt)
+    const Siphon& get_siphon() const
     {
-        asteroid.rotate_over(dt);
+        return siphon;
+    }
+
+    virtual void progress_over(const double dt) override
+    {
+        siphon.progress_over(dt);
+        asteroid.progress_over(dt);
     }
 
 protected:
     Asteroid& asteroid;
-    //Siphon& siphon;
+    Siphon& siphon;
 };
 
 }
