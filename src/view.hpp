@@ -9,6 +9,7 @@
 #include <easy3d/core/mat.h>
 #include <easy3d/renderer/camera.h>
 #include <easy3d/renderer/drawable_triangles.h>
+#include <easy3d/renderer/text_renderer.h>
 #include <easy3d/renderer/vertex_array_object.h>
 #include <easy3d/util/initializer.h>
 #include <easy3d/viewer/viewer.h>
@@ -95,6 +96,144 @@ namespace {
 }
 
 namespace am {
+
+class AsteroidMiningViewer : public easy3d::Viewer
+{
+public:
+    enum class TimePerSecond : int
+    {
+        SECONDS_ONE = 1,
+        SECONDS_TEN = 10,
+        SECONDS_THIRTY = 30,
+        MINUTES_ONE = 60,
+        MINUTES_FIVE = 300,
+        MINUTES_TEN = 600,
+        MINUTES_THIRTY = 1800,
+        HOURS_ONE = 3600,
+        HOURS_FIVE = 18000,
+    };
+
+    AsteroidMiningViewer(
+        const std::string& title,
+        const int width = 1600,
+        const int height = 1200,
+        const bool full_screen = false,
+        const bool resizable = true
+    ) :
+        easy3d::Viewer(
+            title,
+            4,
+            3,
+            2,
+            full_screen,
+            resizable,
+            24,
+            8,
+            width,
+            height
+        ),
+        time_per_second(TimePerSecond::SECONDS_ONE)
+    {
+        show_easy3d_logo_ = false;
+        show_frame_rate_ = true;
+
+        bind(
+            [this](easy3d::Viewer*, easy3d::Model*) -> bool { this->change_time_rate_callback(false); return true; },
+            nullptr,
+            easy3d::Viewer::KEY_Q
+        );
+        bind(
+            [this](easy3d::Viewer*, easy3d::Model*) -> bool { this->change_time_rate_callback(true); return true; },
+            nullptr,
+            easy3d::Viewer::KEY_W
+        );
+    }
+
+    int get_time_rate() const
+    {
+        return static_cast<int>(time_per_second);
+    }
+
+protected:
+    void change_time_rate_callback(const bool incremented)
+    {
+        switch (time_per_second)
+        {
+            case TimePerSecond::SECONDS_ONE:
+                time_per_second = (incremented ? TimePerSecond::SECONDS_TEN : TimePerSecond::SECONDS_ONE);
+                break;
+            case TimePerSecond::SECONDS_TEN:
+                time_per_second = (incremented ? TimePerSecond::SECONDS_THIRTY : TimePerSecond::SECONDS_ONE);
+                break;
+            case TimePerSecond::SECONDS_THIRTY:
+                time_per_second = (incremented ? TimePerSecond::MINUTES_ONE : TimePerSecond::SECONDS_TEN);
+                break;
+            case TimePerSecond::MINUTES_ONE:
+                time_per_second = (incremented ? TimePerSecond::MINUTES_FIVE : TimePerSecond::SECONDS_THIRTY);
+                break;
+            case TimePerSecond::MINUTES_FIVE:
+                time_per_second = (incremented ? TimePerSecond::MINUTES_TEN : TimePerSecond::MINUTES_ONE);
+                break;
+            case TimePerSecond::MINUTES_TEN:
+                time_per_second = (incremented ? TimePerSecond::MINUTES_THIRTY : TimePerSecond::MINUTES_FIVE);
+                break;
+            case TimePerSecond::MINUTES_THIRTY:
+                time_per_second = (incremented ? TimePerSecond::HOURS_ONE : TimePerSecond::MINUTES_TEN);
+                break;
+            case TimePerSecond::HOURS_ONE:
+                time_per_second = (incremented ? TimePerSecond::HOURS_FIVE : TimePerSecond::MINUTES_THIRTY);
+                break;
+            case TimePerSecond::HOURS_FIVE:
+                time_per_second = (incremented ? TimePerSecond::HOURS_FIVE : TimePerSecond::HOURS_ONE);
+                break;
+        }
+    }
+
+    virtual void post_draw() override
+    {
+        easy3d::Viewer::post_draw();
+
+        std::string desc = "Passage of time: ";
+        switch (time_per_second)
+        {
+            case TimePerSecond::SECONDS_ONE:
+                desc = "1 sec";
+                break;
+            case TimePerSecond::SECONDS_TEN:
+                desc = "10 secs";
+                break;
+            case TimePerSecond::SECONDS_THIRTY:
+                desc = "30 secs";
+                break;
+            case TimePerSecond::MINUTES_ONE:
+                desc = "1 min";
+                break;
+            case TimePerSecond::MINUTES_FIVE:
+                desc = "5 mins";
+                break;
+            case TimePerSecond::MINUTES_TEN:
+                desc = "10 mins";
+                break;
+            case TimePerSecond::MINUTES_THIRTY:
+                desc = "30 mins";
+                break;
+            case TimePerSecond::HOURS_ONE:
+                desc = "1 hr";
+                break;
+            case TimePerSecond::HOURS_FIVE:
+                desc = "5 hrs";
+                break;
+        }
+        desc += " / sec";
+
+        const float font_size = 15.0f;
+        float x = 20.0 * dpi_scaling();
+        float y = 2 * font_size * 1.5 * dpi_scaling();
+        texter_->draw(desc, x, y, font_size, 1);
+    }
+
+    TimePerSecond time_per_second;
+};
 
 class View
 {
@@ -196,7 +335,6 @@ public:
         start_animation_time(),
         last_animation_time()
     {
-        window.resize(1600, 1200);
         window.camera()->setZClippingCoefficient(100000);
 
         window.add_drawable(asteroid_mesh.surface);
@@ -259,7 +397,7 @@ protected:
     {
         const auto now = std::chrono::system_clock::now();
         const double dt = std::chrono::duration<double>(now - last_animation_time).count();
-        model.progress_over(dimensions_scaler.get_dimensionless(
+        model.progress_over(window.get_time_rate() * dimensions_scaler.get_dimensionless(
             dt,
             DimensionsScaler::ScaleOpChain() * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::TIME)
         ));
@@ -398,7 +536,7 @@ protected:
         return true;
     }
 
-    easy3d::Viewer window;
+    AsteroidMiningViewer window;
 
     const DimensionsScaler& dimensions_scaler;
     Model& model;
