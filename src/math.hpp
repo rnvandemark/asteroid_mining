@@ -55,7 +55,20 @@ namespace am {
         Real R = (2 * p * p * p - 9 * p * q + 27 * r) / 54;
         if (R * R < Q * Q * Q) {
             Real rtQ = std::sqrt(Q);
-            Real theta = std::acos(R / (Q * rtQ)) / 3;
+            Real v = R / (Q * rtQ);
+            Real theta = 0;
+            if (v > 1)
+            {
+                theta = 0;
+            }
+            else if (v < 1)
+            {
+                theta = M_PI;
+            }
+            else
+            {
+                Real theta = std::acos(v) / 3;
+            }
             Real st = std::sin(theta);
             Real ct = std::cos(theta);
             roots[0] = -2 * rtQ * ct - p / 3;
