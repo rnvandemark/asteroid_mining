@@ -114,6 +114,7 @@ public:
 
     AsteroidMiningViewer(
         const std::string& title,
+        const easy3d::vec4& bg_color = easy3d::vec4(0, 0, 0, 1),
         const int width = 1600,
         const int height = 1200,
         const bool full_screen = false,
@@ -131,10 +132,12 @@ public:
             width,
             height
         ),
-        time_per_second(TimePerSecond::SECONDS_ONE)
+        time_per_second(TimePerSecond::SECONDS_ONE),
+        show_gravity_gradients(true)
     {
         show_easy3d_logo_ = false;
         show_frame_rate_ = true;
+        set_background_color(bg_color);
 
         bind(
             [this](easy3d::Viewer*, easy3d::Model*) -> bool { this->change_time_rate_callback(false); return true; },
@@ -146,11 +149,22 @@ public:
             nullptr,
             easy3d::Viewer::KEY_W
         );
+
+        bind(
+            [this](easy3d::Viewer*, easy3d::Model*) -> bool { show_gravity_gradients = (!show_gravity_gradients); return true; },
+            nullptr,
+            easy3d::Viewer::KEY_G
+        );
     }
 
     int get_time_rate() const
     {
         return static_cast<int>(time_per_second);
+    }
+
+    bool showing_gravity_gradients() const
+    {
+        return show_gravity_gradients;
     }
 
 protected:
@@ -226,12 +240,39 @@ protected:
         desc += " / sec";
 
         const float font_size = 15.0f;
-        float x = 20.0 * dpi_scaling();
-        float y = 2 * font_size * 1.5 * dpi_scaling();
-        texter_->draw(desc, x, y, font_size, 1);
+        float x = 20.0f * dpi_scaling();
+        float y = 0.0f;
+
+        // DISCLAIMER: partially copy and pasted from easy3d::Viewer so I can
+        // rewrite stuff and account for the background color
+        const easy3d::vec3 font_color(1-background_color().x, 1-background_color().y, 1-background_color().z);
+
+        if (show_easy3d_logo_)
+        {
+            y += font_size * 1.5f * dpi_scaling();
+            texter_->draw("Easy3D", x, y, font_size, 0, font_color);
+        }
+
+        if (show_frame_rate_)
+        {
+            y += font_size * 1.5f * dpi_scaling();
+            texter_->draw(framerate_, x, y, font_size, 1, font_color);
+        }
+
+        y += font_size * 1.5f * dpi_scaling();
+        texter_->draw(desc, x, y, font_size, 1, font_color);
+
+        if (!hint_.empty())
+        {
+            x += font_size * dpi_scaling();
+            y += font_size * 1.5f * dpi_scaling();
+            texter_->draw(hint_, x, y, font_size, easy3d::TextRenderer::ALIGN_LEFT, 1, font_color);
+        }
     }
 
     TimePerSecond time_per_second;
+
+    bool show_gravity_gradients;
 };
 
 class View
@@ -466,6 +507,7 @@ protected:
             easy3d::VertexArrayObject::unmap_buffer(GL_ARRAY_BUFFER, siphon_mesh.surface->vertex_buffer());
         }
 
+        if (window.showing_gravity_gradients())
         {
             std::vector<easy3d::vec3> gravity_gradients(gravity_gradient_marker_meshes.size());
             std::vector<float> gravity_gradient_magnitudes(gravity_gradient_marker_meshes.size());
@@ -511,7 +553,35 @@ protected:
                 }
 
                 // Color it based on how relatively strong the gradient is
-                mesh.surface->set_uniform_coloring(easy3d::vec4(relative_norm, 0, 0, 1));
+                mesh.surface->set_uniform_coloring(easy3d::vec4(1, 1-relative_norm, 1-relative_norm, 1));
+
+                easy3d::VertexArrayObject::unmap_buffer(GL_ARRAY_BUFFER, mesh.surface->vertex_buffer());
+            }
+        }
+        else
+        {
+            for (std::size_t i = 0; i < gravity_gradient_marker_meshes.size(); i++)
+            {
+                const auto& mesh = gravity_gradient_marker_meshes[i].arrow;
+
+                easy3d::vec3* const vertex_buffer = reinterpret_cast<easy3d::vec3*>(easy3d::VertexArrayObject::map_buffer(
+                    GL_ARRAY_BUFFER, mesh.surface->vertex_buffer(), GL_WRITE_ONLY
+                ));
+                if (!vertex_buffer)
+                {
+                    return false;
+                }
+
+                // For each of these markers, calculate the gravity gradient at these locations
+                for (std::size_t j = 0; j < mesh.triangle_points.size(); j++)
+                {
+                    vertex_buffer[j].x = 0;
+                    vertex_buffer[j].y = 0;
+                    vertex_buffer[j].z = 0;
+                }
+
+                // Color it based on how relatively strong the gradient is
+                mesh.surface->set_uniform_coloring(easy3d::vec4(0, 0, 0, 1));
 
                 easy3d::VertexArrayObject::unmap_buffer(GL_ARRAY_BUFFER, mesh.surface->vertex_buffer());
             }
