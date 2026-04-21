@@ -509,14 +509,19 @@ protected:
 
         if (window.showing_gravity_gradients())
         {
-            std::vector<easy3d::vec3> gravity_gradients(gravity_gradient_marker_meshes.size());
+            std::vector<std::array<double, 3>> gravity_gradients(gravity_gradient_marker_meshes.size());
             std::vector<float> gravity_gradient_magnitudes(gravity_gradient_marker_meshes.size());
 
             for (std::size_t i = 0; i < gravity_gradient_marker_meshes.size(); i++)
             {
-                const auto marker_p__asteroid = q__asteroid__universe.rotate(gravity_gradient_marker_meshes[i].position);
-                gravity_gradients[i] = model.calculate_asteroid_effective_potential_cartesian_partials(marker_p__asteroid);
-                gravity_gradient_magnitudes[i] = gravity_gradients[i].length();
+                gravity_gradients[i] = asteroid.calculate_effective_potential_cartesian_partials_at(
+                    q__asteroid__universe.rotate(gravity_gradient_marker_meshes[i].position)
+                );
+                gravity_gradient_magnitudes[i] = std::sqrt(
+                    (gravity_gradients[i][0] * gravity_gradients[i][0])
+                    + (gravity_gradients[i][1] * gravity_gradients[i][1])
+                    + (gravity_gradients[i][2] * gravity_gradients[i][2])
+                );
             }
 
             const auto min_mag_iter = std::min_element(gravity_gradient_magnitudes.cbegin(), gravity_gradient_magnitudes.cend());
@@ -528,7 +533,10 @@ protected:
             {
                 const auto& mesh = gravity_gradient_marker_meshes[i].arrow;
                 const auto T__marker__CoG = easy3d::Mat4<float>::translation(gravity_gradient_marker_meshes[i].position)
-                    * easy3d::Mat4<float>(rotation_to_align(easy3d::vec3(0, 0, 1), q__universe__asteroid.rotate(gravity_gradients[i])))
+                    * easy3d::Mat4<float>(
+                        rotation_to_align(easy3d::vec3(0, 0, 1),
+                        q__universe__asteroid.rotate(easy3d::vec3(gravity_gradients[i][0], gravity_gradients[i][1], gravity_gradients[i][2])))
+                    )
                 ;
                 const float relative_norm = (gravity_gradient_magnitudes[i] - min_mag) / (max_mag - min_mag);
 
@@ -572,7 +580,8 @@ protected:
                     return false;
                 }
 
-                // For each of these markers, calculate the gravity gradient at these locations
+                // Put all of the markers inside of the asteroid to effectively
+                // hide them
                 for (std::size_t j = 0; j < mesh.triangle_points.size(); j++)
                 {
                     vertex_buffer[j].x = 0;

@@ -23,6 +23,7 @@ public:
         const double beta_,
         const double gamma_,
         const double density_,
+        const double rho_A,
         const double omega_bar
     ):
         alpha(1.0),
@@ -30,16 +31,22 @@ public:
         gamma(gamma_),
         density(density_),
         angular_velocity(1.0),
-        mu(4 * M_PI * G * density * alpha * beta * gamma / 3),
-        omega(omega_bar / std::sqrt(mu))
+        omega(omega_bar / std::sqrt(4 * M_PI * G * rho_A * beta * gamma / 3))
     {
+        std::cout << "Asteroid characteristics:" << std::endl;
+        std::cout << "- alpha: " << alpha << std::endl;
+        std::cout << "- beta: " << beta << std::endl;
+        std::cout << "- gamma: " << gamma << std::endl;
+        std::cout << "- density: " << density << std::endl;
+        std::cout << "- angular velocity: " << angular_velocity << std::endl;
+        std::cout << "- omega: " << omega << std::endl;
     }
 
     static Asteroid from_dimensioned_values(
         const DimensionsScaler& dimensions_scaler,
         const double beta_bar,
         const double gamma_bar,
-        const double rho_bar,
+        const double rho_A,
         const double omega_bar
     )
     {
@@ -49,7 +56,8 @@ public:
         return Asteroid(
             dimensions_scaler.get_dimensionless(beta_bar, Soc() * Sf(Dt::DISTANCE)),
             dimensions_scaler.get_dimensionless(gamma_bar, Soc() * Sf(Dt::DISTANCE)),
-            dimensions_scaler.get_dimensionless(rho_bar, Soc() * Sf(Dt::MASS) / Sf(Dt::DISTANCE, 3)),
+            dimensions_scaler.get_dimensionless(rho_A, Soc() * Sf(Dt::MASS) / Sf(Dt::DISTANCE, 3)),
+            rho_A,
             omega_bar
         );
     }
@@ -62,6 +70,26 @@ public:
     virtual void progress_over(const double dt) override
     {
         rotation += (dt * angular_velocity);
+    }
+
+    std::array<double, 3> calculate_effective_potential_cartesian_partials_at(const easy3d::vec3& position) const
+    {
+        const double lambda = ((position.length() < 1e-6) ? 0 : calculate_confocal_ellipsoid_surface(
+            beta,
+            gamma,
+            position.x,
+            position.y,
+            position.z
+        ));
+        return calculate_effective_potential_cartesian_partials(
+            beta,
+            gamma,
+            omega,
+            position.x,
+            position.y,
+            position.z,
+            lambda
+        );
     }
 
     // The longest dimension of the ellipsoid (distance).
@@ -77,9 +105,6 @@ public:
     // The asteroid's angular velocity, (about the smallest dimension)
     // (rotation per time).
     const double angular_velocity;
-
-    // The gravitational parameter (cubic distance per time squared).
-    const double mu;
 
     const double omega;
 

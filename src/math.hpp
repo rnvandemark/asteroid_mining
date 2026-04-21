@@ -169,7 +169,7 @@ namespace am {
         return lambda;
     }
 
-    easy3d::vec3 calculate_effective_potential_cartesian_partials(
+    std::array<double, 3> calculate_effective_potential_cartesian_partials(
         const double beta,
         const double gamma,
         const double omega,
@@ -183,11 +183,11 @@ namespace am {
         const double rd0 = 1 + lambda;
         const double rd1 = (beta * beta) + lambda;
         const double rd2 = (gamma * gamma) + lambda;
-        return easy3d::vec3(
+        return std::array<double, 3>{
             x * (1 - (c * boost::math::ellint_rd(rd1, rd2, rd0))),
             y * (1 - (c * boost::math::ellint_rd(rd0, rd2, rd1))),
             z * (1 - (c * boost::math::ellint_rd(rd0, rd1, rd2)))
-        );
+        };
     }
 
 }
