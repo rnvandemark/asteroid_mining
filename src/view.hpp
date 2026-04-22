@@ -133,7 +133,8 @@ public:
             height
         ),
         time_per_second(TimePerSecond::SECONDS_ONE),
-        show_gravity_gradients(true)
+        show_gravity_gradients(true),
+        corotate_camera_with_asteroid(false)
     {
         show_easy3d_logo_ = false;
         show_frame_rate_ = true;
@@ -155,6 +156,12 @@ public:
             nullptr,
             easy3d::Viewer::KEY_G
         );
+
+        bind(
+            [this](easy3d::Viewer*, easy3d::Model*) -> bool { corotate_camera_with_asteroid = (!corotate_camera_with_asteroid); return true; },
+            nullptr,
+            easy3d::Viewer::KEY_L
+        );
     }
 
     int get_time_rate() const
@@ -165,6 +172,11 @@ public:
     bool showing_gravity_gradients() const
     {
         return show_gravity_gradients;
+    }
+
+    bool corotating_camera_with_asteroid() const
+    {
+        return corotate_camera_with_asteroid;
     }
 
 protected:
@@ -273,6 +285,8 @@ protected:
     TimePerSecond time_per_second;
 
     bool show_gravity_gradients;
+
+    bool corotate_camera_with_asteroid;
 };
 
 class View
@@ -597,6 +611,17 @@ protected:
         }
 
         window.update();
+
+        if (window.corotating_camera_with_asteroid())
+        {
+            window.camera()->setPosition(easy3d::vec3(0, 0, dimensions_scaler.get_dimensioned(
+                3 * model.get_asteroid().alpha,
+                DimensionsScaler::ScaleOpChain() * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::DISTANCE)
+            )));
+            window.camera()->setViewDirection(easy3d::vec3(0, 0, -1));
+            window.camera()->setOrientation(easy3d::Quat<float>(easy3d::Vec<3, float>(0, 0, 1), asteroid.get_rotation()));
+        }
+
         return true;
     }
 
