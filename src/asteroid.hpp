@@ -72,6 +72,14 @@ public:
         rotation += (dt * angular_velocity);
     }
 
+    bool is_point_within(const easy3d::vec3& p)
+    {
+        const double x = p.x / alpha;
+        const double y = p.y / beta;
+        const double z = p.z / gamma;
+        return (x*x) + (y*y) + (z*z) + 1e-6 <= 1.0;
+    }
+
     std::array<double, 3> calculate_effective_potential_cartesian_partials_at(const easy3d::vec3& position) const
     {
         const double lambda = ((position.length() < 1e-6) ? 0 : calculate_confocal_ellipsoid_surface(

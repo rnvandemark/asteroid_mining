@@ -116,7 +116,7 @@ public:
     AsteroidMiningViewer(
         const std::string& title,
         const DimensionsScaler& dimensions_scaler_,
-        const Model& model_,
+        Model& model_,
         const easy3d::vec4& bg_color = easy3d::vec4(0, 0, 0, 1),
         const int width = 1600,
         const int height = 1200,
@@ -190,6 +190,12 @@ public:
             nullptr,
             easy3d::Viewer::KEY_P,
             easy3d::Viewer::MODIF_SHIFT
+        );
+
+        bind(
+            [this](easy3d::Viewer*, easy3d::Model*) -> bool { model.set_new_release_requested(); return true; },
+            nullptr,
+            easy3d::Viewer::KEY_R
         );
     }
 
@@ -343,7 +349,7 @@ protected:
     }
 
     const DimensionsScaler& dimensions_scaler;
-    const Model& model;
+    Model& model;
 
     TimePerSecond time_per_second;
 
@@ -443,6 +449,14 @@ public:
             2 * siphon_width,
             2 * siphon_width
         ),
+        released_payload_mesh(
+            "released payload",
+            easy3d::SurfaceMeshFactory::icosphere(),
+            easy3d::vec4(0, 1, 0, 1),
+            siphon_width,
+            siphon_width,
+            siphon_width
+        ),
         siphon_mass_meshes(),
         gravity_gradient_marker_meshes(),
         start_animation_time(),
@@ -453,6 +467,7 @@ public:
         window.add_drawable(asteroid_mesh.surface);
         window.add_drawable(siphon_mesh.surface);
         window.add_drawable(collecting_satellite_mesh.surface);
+        window.add_drawable(released_payload_mesh.surface);
 
         for (std::size_t i = 0; i < 2 * model.get_siphon().n; i++)
         {
@@ -537,6 +552,7 @@ protected:
     {
         const auto& asteroid = model.get_asteroid();
         const auto& siphon = model.get_siphon();
+        const auto& released_payload = model.get_released_payload();
 
         const easy3d::Quat<float> q__universe__asteroid(easy3d::Vec<3, float>(0, 0, 1), asteroid.get_rotation());
         const easy3d::Quat<float> q__asteroid__universe = q__universe__asteroid.inverse();
@@ -809,6 +825,59 @@ protected:
             }
         }
 
+        if (released_payload.is_active())
+        {
+            easy3d::vec3* const vertex_buffer = reinterpret_cast<easy3d::vec3*>(easy3d::VertexArrayObject::map_buffer(
+                GL_ARRAY_BUFFER, released_payload_mesh.surface->vertex_buffer(), GL_WRITE_ONLY
+            ));
+            if (!vertex_buffer)
+            {
+                return false;
+            }
+
+            // Transform the released payload's mesh
+            const auto& released_payload_p__asteroid = released_payload.get_position();
+            const easy3d::Mat4<float> T__universe__released_payload = easy3d::Mat4<float>::rotation(q__universe__asteroid)
+                * easy3d::Mat4<float>::translation(released_payload_p__asteroid)
+            ;
+            for (std::size_t i = 0; i < released_payload_mesh.triangle_points.size(); i++)
+            {
+                const auto p = get_dimensioned(
+                    T__universe__released_payload * released_payload_mesh.triangle_points[i],
+                    DimensionsScaler::ScaleOpChain() * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::DISTANCE)
+                );
+                vertex_buffer[i].x = p.x;
+                vertex_buffer[i].y = p.y;
+                vertex_buffer[i].z = p.z;
+            }
+
+            easy3d::VertexArrayObject::unmap_buffer(GL_ARRAY_BUFFER, released_payload_mesh.surface->vertex_buffer());
+        }
+        else
+        {
+            easy3d::vec3* const vertex_buffer = reinterpret_cast<easy3d::vec3*>(easy3d::VertexArrayObject::map_buffer(
+                GL_ARRAY_BUFFER, released_payload_mesh.surface->vertex_buffer(), GL_WRITE_ONLY
+            ));
+            if (!vertex_buffer)
+            {
+                return false;
+            }
+
+            // Put all of the markers inside of the asteroid to effectively
+            // hide them
+            for (std::size_t j = 0; j < released_payload_mesh.triangle_points.size(); j++)
+            {
+                vertex_buffer[j].x = 0;
+                vertex_buffer[j].y = 0;
+                vertex_buffer[j].z = 0;
+            }
+
+            // Color it based on how relatively strong the gradient is
+            released_payload_mesh.surface->set_uniform_coloring(easy3d::vec4(0, 0, 0, 1));
+
+            easy3d::VertexArrayObject::unmap_buffer(GL_ARRAY_BUFFER, released_payload_mesh.surface->vertex_buffer());
+        }
+
         window.update();
 
         if (window.corotating_camera_with_asteroid())
@@ -836,6 +905,7 @@ protected:
     DrawableMesh asteroid_mesh;
     DrawableMesh siphon_mesh;
     DrawableMesh collecting_satellite_mesh;
+    DrawableMesh released_payload_mesh;
     std::vector<DrawableMesh> siphon_mass_meshes;
     std::vector<std::vector<DrawableMesh>> gravity_gradient_marker_meshes;
 

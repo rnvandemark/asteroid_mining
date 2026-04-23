@@ -98,6 +98,11 @@ public:
         return siphon_angular_position;
     }
 
+    double get_siphon_angular_velocity() const
+    {
+        return siphon_angular_velocity;
+    }
+
     double get_cs_payload_mass() const
     {
         return cs_payload_mass;
@@ -121,6 +126,11 @@ public:
     std::array<double, 3> get_mass_gravity_gradient(const unsigned int i) const
     {
         return mass_gravity_gradients[i];
+    }
+
+    void clear_cs_payload_mass()
+    {
+        cs_payload_mass = 0.0;
     }
 
     virtual void progress_over(const double dt) override
@@ -263,14 +273,19 @@ public:
 
     const double max_bottom_lifting_side_mass_position;
 
-    std::array<double, 3> calculate_effective_potential_cartesian_partials_on_chain_at(const double chain_position) const
+    easy3d::vec3 get_position_in_asteroid_frame(const double chain_position) const
     {
         const double net_chain_angle = anchor_point_polar_angle + siphon_angular_position;
-        return asteroid.calculate_effective_potential_cartesian_partials_at(easy3d::vec3(
+        return easy3d::vec3(
             (anchor_point_polar_radius * std::cos(anchor_point_polar_angle)) + (chain_position * std::cos(net_chain_angle)),
             (anchor_point_polar_radius * std::sin(anchor_point_polar_angle)) + (chain_position * std::sin(net_chain_angle)),
             0
-        ));
+        );
+    }
+
+    std::array<double, 3> calculate_effective_potential_cartesian_partials_on_chain_at(const double chain_position) const
+    {
+        return asteroid.calculate_effective_potential_cartesian_partials_at(get_position_in_asteroid_frame(chain_position));
     }
 
 protected:
