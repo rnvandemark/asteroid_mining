@@ -26,9 +26,8 @@ int main(int argc, char** argv)
     const double initial_bottom_lifting_side_mass_velocity = 0.0;
 
     const double siphon_width = 5;
-    const double gravity_gradient_shell_radius = 2;
-    const unsigned int gravity_gradient_phi_step = 20;
-    const unsigned int gravity_gradient_theta_step = 20;
+    const unsigned int num_latitudinal_gravity_gradient_marker_rings = 10;
+    const unsigned int num_longitudinal_gravity_gradient_markers = 20;
 
     am::DimensionsScaler dimensions_scaler(alpha_bar, bucket_mass + payload_mass, 1 / omega_bar);
 
@@ -60,8 +59,7 @@ int main(int argc, char** argv)
         dimensions_scaler,
         model,
         siphon_width,
-        gravity_gradient_shell_radius,
-        gravity_gradient_phi_step,
-        gravity_gradient_theta_step
+        num_latitudinal_gravity_gradient_marker_rings,
+        num_longitudinal_gravity_gradient_markers
     ).run();
 }

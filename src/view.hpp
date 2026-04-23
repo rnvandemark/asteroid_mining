@@ -13,6 +13,7 @@
 #include <easy3d/util/initializer.h>
 #include <easy3d/viewer/viewer.h>
 
+#include <numeric>
 #include <chrono>
 #include <memory>
 
@@ -138,6 +139,7 @@ public:
         model(model_),
         time_per_second(TimePerSecond::SECONDS_ONE),
         show_gravity_gradients(true),
+        gravity_gradients_radius(1.5),
         corotate_camera_with_asteroid(false)
     {
         show_easy3d_logo_ = false;
@@ -166,6 +168,29 @@ public:
             nullptr,
             easy3d::Viewer::KEY_L
         );
+
+        bind(
+            [this](easy3d::Viewer*, easy3d::Model*) -> bool { change_gravity_gradients_radius_callback(false, false); return true; },
+            nullptr,
+            easy3d::Viewer::KEY_O
+        );
+        bind(
+            [this](easy3d::Viewer*, easy3d::Model*) -> bool { change_gravity_gradients_radius_callback(true, false); return true; },
+            nullptr,
+            easy3d::Viewer::KEY_P
+        );
+        bind(
+            [this](easy3d::Viewer*, easy3d::Model*) -> bool { change_gravity_gradients_radius_callback(false, true); return true; },
+            nullptr,
+            easy3d::Viewer::KEY_O,
+            easy3d::Viewer::MODIF_SHIFT
+        );
+        bind(
+            [this](easy3d::Viewer*, easy3d::Model*) -> bool { change_gravity_gradients_radius_callback(true, true); return true; },
+            nullptr,
+            easy3d::Viewer::KEY_P,
+            easy3d::Viewer::MODIF_SHIFT
+        );
     }
 
     int get_time_rate() const
@@ -176,6 +201,11 @@ public:
     bool showing_gravity_gradients() const
     {
         return show_gravity_gradients;
+    }
+
+    double get_gravity_gradients_radius() const
+    {
+        return gravity_gradients_radius;
     }
 
     bool corotating_camera_with_asteroid() const
@@ -216,6 +246,14 @@ protected:
                 time_per_second = (incremented ? TimePerSecond::HOURS_FIVE : TimePerSecond::HOURS_ONE);
                 break;
         }
+    }
+
+    void change_gravity_gradients_radius_callback(const bool incremented, const bool accelerated)
+    {
+        gravity_gradients_radius = std::max(
+            gravity_gradients_radius + ((incremented ? 1 : -1) * (accelerated ? 0.1 : 0.01)),
+            1.01
+        );
     }
 
     virtual void post_draw() override
@@ -301,6 +339,7 @@ protected:
     TimePerSecond time_per_second;
 
     bool show_gravity_gradients;
+    double gravity_gradients_radius;
 
     bool corotate_camera_with_asteroid;
 };
@@ -355,29 +394,13 @@ protected:
         std::shared_ptr<easy3d::TrianglesDrawable> surface;
     };
 
-    struct GravityGradientMarkerMesh
-    {
-        GravityGradientMarkerMesh(
-            const DrawableMesh& arrow_,
-            const easy3d::vec3& position_
-        ) :
-            arrow(arrow_),
-            position(position_)
-        {
-        }
-
-        DrawableMesh arrow;
-        const easy3d::vec3 position;
-    };
-
 public:
     View(
         const DimensionsScaler& dimensions_scaler_,
         Model& model_,
         const double siphon_width_,
-        const double gravity_gradient_shell_radius,
-        const unsigned int gravity_gradient_phi_step,
-        const unsigned int gravity_gradient_theta_step
+        const unsigned int num_latitudinal_gravity_gradient_marker_rings_,
+        const unsigned int num_longitudinal_gravity_gradient_markers_
     ) :
         window("Triaxial Ellipsoid Viewer", dimensions_scaler_, model_),
         dimensions_scaler(dimensions_scaler_),
@@ -385,6 +408,8 @@ public:
         siphon_width(dimensions_scaler.get_dimensionless(
             siphon_width_, DimensionsScaler::ScaleOpChain() * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::DISTANCE)
         )),
+        num_latitudinal_gravity_gradient_marker_rings(num_latitudinal_gravity_gradient_marker_rings_),
+        num_longitudinal_gravity_gradient_markers(num_longitudinal_gravity_gradient_markers_),
         asteroid_mesh(
             "asteroid",
             easy3d::SurfaceMeshFactory::icosphere(),
@@ -440,14 +465,13 @@ public:
             window.add_drawable(siphon_mass_mesh.surface);
         }
 
-        for (unsigned int theta_deg = 0; theta_deg <= 360; theta_deg += gravity_gradient_theta_step)
+        gravity_gradient_marker_meshes.resize(num_latitudinal_gravity_gradient_marker_rings);
+        for (unsigned int latitude = 0; latitude < num_latitudinal_gravity_gradient_marker_rings; latitude++)
         {
-            const float theta = theta_deg * M_PI / 180;
-            for (unsigned int phi_deg = 0; phi_deg <= 180; phi_deg += gravity_gradient_phi_step)
+            for (unsigned int longitude = 0; longitude < num_longitudinal_gravity_gradient_markers; longitude++)
             {
-                const float phi = phi_deg * M_PI / 180;
-                DrawableMesh m(
-                    "arrow [" + std::to_string(phi_deg) + "/" + std::to_string(theta_deg) + "]",
+                const auto gravity_gradient_marker_mesh = DrawableMesh(
+                    "gravity gradient marker/" + std::to_string(latitude) + "/" + std::to_string(longitude),
                     create_arrow_mesh(),
                     easy3d::vec4(0, 0, 0, 1),
                     dimensions_scaler.get_dimensionless(
@@ -460,15 +484,8 @@ public:
                         15, DimensionsScaler::ScaleOpChain() * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::DISTANCE)
                     )
                 );
-                gravity_gradient_marker_meshes.push_back(GravityGradientMarkerMesh(
-                    m,
-                    easy3d::vec3(
-                        gravity_gradient_shell_radius * std::sin(theta) * std::cos(phi),
-                        gravity_gradient_shell_radius * std::sin(theta) * std::sin(phi),
-                        gravity_gradient_shell_radius * std::cos(theta)
-                    )
-                ));
-                window.add_drawable(m.surface);
+                gravity_gradient_marker_meshes[latitude].push_back(gravity_gradient_marker_mesh);
+                window.add_drawable(gravity_gradient_marker_mesh.surface);
             }
         }
 
@@ -659,88 +676,127 @@ protected:
 
         if (window.showing_gravity_gradients())
         {
-            std::vector<std::array<double, 3>> gravity_gradients(gravity_gradient_marker_meshes.size());
-            std::vector<double> gravity_gradient_magnitudes(gravity_gradient_marker_meshes.size());
+            const double gravity_gradients_radius = window.get_gravity_gradients_radius();
+            std::vector<std::vector<easy3d::vec3>> gravity_gradient_marker_positions(
+                num_latitudinal_gravity_gradient_marker_rings,
+                std::vector<easy3d::vec3>(num_longitudinal_gravity_gradient_markers)
+            );
+            std::vector<std::vector<std::array<double, 3>>> gravity_gradients(
+                num_latitudinal_gravity_gradient_marker_rings,
+                std::vector<std::array<double, 3>>(num_longitudinal_gravity_gradient_markers)
+            );
+            std::vector<std::vector<double>> gravity_gradient_magnitudes(
+                num_latitudinal_gravity_gradient_marker_rings,
+                std::vector<double>(num_longitudinal_gravity_gradient_markers)
+            );
 
-            for (std::size_t i = 0; i < gravity_gradient_marker_meshes.size(); i++)
+            for (unsigned int latitude = 0; latitude < num_latitudinal_gravity_gradient_marker_rings; latitude++)
             {
-                gravity_gradients[i] = asteroid.calculate_effective_potential_cartesian_partials_at(
-                    q__asteroid__universe.rotate(gravity_gradient_marker_meshes[i].position)
-                );
-                gravity_gradient_magnitudes[i] = std::sqrt(
-                    (gravity_gradients[i][0] * gravity_gradients[i][0])
-                    + (gravity_gradients[i][1] * gravity_gradients[i][1])
-                    + (gravity_gradients[i][2] * gravity_gradients[i][2])
-                );
+                const double theta = latitude * M_PI / (num_latitudinal_gravity_gradient_marker_rings + 1);
+                for (unsigned int longitude = 0; longitude < num_longitudinal_gravity_gradient_markers; longitude++)
+                {
+                    const double phi = longitude * 2 * M_PI / (num_longitudinal_gravity_gradient_markers + 1);
+                    gravity_gradient_marker_positions[latitude][longitude].x = gravity_gradients_radius * std::sin(theta) * std::cos(phi);
+                    gravity_gradient_marker_positions[latitude][longitude].y = gravity_gradients_radius * std::sin(theta) * std::sin(phi);
+                    gravity_gradient_marker_positions[latitude][longitude].z = gravity_gradients_radius * std::cos(theta);
+                    gravity_gradients[latitude][longitude] = asteroid.calculate_effective_potential_cartesian_partials_at(
+                        q__asteroid__universe.rotate(gravity_gradient_marker_positions[latitude][longitude])
+                    );
+                    gravity_gradient_magnitudes[latitude][longitude] = std::sqrt(
+                        (gravity_gradients[latitude][longitude][0] * gravity_gradients[latitude][longitude][0])
+                        + (gravity_gradients[latitude][longitude][1] * gravity_gradients[latitude][longitude][1])
+                        + (gravity_gradients[latitude][longitude][2] * gravity_gradients[latitude][longitude][2])
+                    );
+                }
             }
 
-            const double min_mag = *std::min_element(gravity_gradient_magnitudes.cbegin(), gravity_gradient_magnitudes.cend());
-            const double max_mag = *std::max_element(gravity_gradient_magnitudes.cbegin(), gravity_gradient_magnitudes.cend());
+            const std::vector<double> flattened_gravity_gradient_magnitudes = std::accumulate(
+                gravity_gradient_magnitudes.cbegin(),
+                gravity_gradient_magnitudes.cend(),
+                std::vector<double>(),
+                [] (std::vector<double>& a, const std::vector<double>& b)
+                {
+                    a.insert(a.end(), b.cbegin(), b.cend());
+                    return a;
+                }
+            );
+            const double min_mag = *std::min_element(flattened_gravity_gradient_magnitudes.cbegin(), flattened_gravity_gradient_magnitudes.cend());
+            const double max_mag = *std::max_element(flattened_gravity_gradient_magnitudes.cbegin(), flattened_gravity_gradient_magnitudes.cend());
 
-            for (std::size_t i = 0; i < gravity_gradient_marker_meshes.size(); i++)
+            for (unsigned int latitude = 0; latitude < num_latitudinal_gravity_gradient_marker_rings; latitude++)
             {
-                const auto& mesh = gravity_gradient_marker_meshes[i].arrow;
-                const auto T__marker__CoG = easy3d::Mat4<float>::translation(gravity_gradient_marker_meshes[i].position)
-                    * easy3d::Mat4<float>(
-                        rotation_to_align(easy3d::vec3(0, 0, 1),
-                        q__universe__asteroid.rotate(easy3d::vec3(gravity_gradients[i][0], gravity_gradients[i][1], gravity_gradients[i][2])))
-                    )
-                ;
-                const double relative_norm = (gravity_gradient_magnitudes[i] - min_mag) / (max_mag - min_mag);
-
-                easy3d::vec3* const vertex_buffer = reinterpret_cast<easy3d::vec3*>(easy3d::VertexArrayObject::map_buffer(
-                    GL_ARRAY_BUFFER, mesh.surface->vertex_buffer(), GL_WRITE_ONLY
-                ));
-                if (!vertex_buffer)
+                for (unsigned int longitude = 0; longitude < num_longitudinal_gravity_gradient_markers; longitude++)
                 {
-                    return false;
+                    const auto& mesh = gravity_gradient_marker_meshes[latitude][longitude];
+                    const auto T__marker__CoG = easy3d::Mat4<float>::translation(gravity_gradient_marker_positions[latitude][longitude])
+                        * easy3d::Mat4<float>(rotation_to_align(
+                            easy3d::vec3(0, 0, 1),
+                            q__universe__asteroid.rotate(easy3d::vec3(
+                                gravity_gradients[latitude][longitude][0],
+                                gravity_gradients[latitude][longitude][1],
+                                gravity_gradients[latitude][longitude][2]
+                            ))
+                        ))
+                    ;
+                    const double relative_norm = (gravity_gradient_magnitudes[latitude][longitude] - min_mag) / (max_mag - min_mag);
+
+                    easy3d::vec3* const vertex_buffer = reinterpret_cast<easy3d::vec3*>(easy3d::VertexArrayObject::map_buffer(
+                        GL_ARRAY_BUFFER, mesh.surface->vertex_buffer(), GL_WRITE_ONLY
+                    ));
+                    if (!vertex_buffer)
+                    {
+                        return false;
+                    }
+
+                    // For each of these markers, calculate the gravity gradient at these locations
+                    for (std::size_t j = 0; j < mesh.triangle_points.size(); j++)
+                    {
+                        const auto p = get_dimensioned(
+                            T__marker__CoG * mesh.triangle_points[j],
+                            DimensionsScaler::ScaleOpChain() * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::DISTANCE)
+                        );
+                        vertex_buffer[j].x = p.x;
+                        vertex_buffer[j].y = p.y;
+                        vertex_buffer[j].z = p.z;
+                    }
+
+                    // Color it based on how relatively strong the gradient is
+                    mesh.surface->set_uniform_coloring(easy3d::vec4(1, 1-relative_norm, 1-relative_norm, 1));
+
+                    easy3d::VertexArrayObject::unmap_buffer(GL_ARRAY_BUFFER, mesh.surface->vertex_buffer());
                 }
-
-                // For each of these markers, calculate the gravity gradient at these locations
-                for (std::size_t j = 0; j < mesh.triangle_points.size(); j++)
-                {
-                    const auto p = get_dimensioned(
-                        T__marker__CoG * mesh.triangle_points[j],
-                        DimensionsScaler::ScaleOpChain() * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::DISTANCE)
-                    );
-                    vertex_buffer[j].x = p.x;
-                    vertex_buffer[j].y = p.y;
-                    vertex_buffer[j].z = p.z;
-                }
-
-                // Color it based on how relatively strong the gradient is
-                mesh.surface->set_uniform_coloring(easy3d::vec4(1, 1-relative_norm, 1-relative_norm, 1));
-
-                easy3d::VertexArrayObject::unmap_buffer(GL_ARRAY_BUFFER, mesh.surface->vertex_buffer());
             }
         }
         else
         {
-            for (std::size_t i = 0; i < gravity_gradient_marker_meshes.size(); i++)
+            for (unsigned int latitude = 0; latitude < num_latitudinal_gravity_gradient_marker_rings; latitude++)
             {
-                const auto& mesh = gravity_gradient_marker_meshes[i].arrow;
-
-                easy3d::vec3* const vertex_buffer = reinterpret_cast<easy3d::vec3*>(easy3d::VertexArrayObject::map_buffer(
-                    GL_ARRAY_BUFFER, mesh.surface->vertex_buffer(), GL_WRITE_ONLY
-                ));
-                if (!vertex_buffer)
+                for (unsigned int longitude = 0; longitude < num_longitudinal_gravity_gradient_markers; longitude++)
                 {
-                    return false;
+                    const auto& mesh = gravity_gradient_marker_meshes[latitude][longitude];
+
+                    easy3d::vec3* const vertex_buffer = reinterpret_cast<easy3d::vec3*>(easy3d::VertexArrayObject::map_buffer(
+                        GL_ARRAY_BUFFER, mesh.surface->vertex_buffer(), GL_WRITE_ONLY
+                    ));
+                    if (!vertex_buffer)
+                    {
+                        return false;
+                    }
+
+                    // Put all of the markers inside of the asteroid to effectively
+                    // hide them
+                    for (std::size_t j = 0; j < mesh.triangle_points.size(); j++)
+                    {
+                        vertex_buffer[j].x = 0;
+                        vertex_buffer[j].y = 0;
+                        vertex_buffer[j].z = 0;
+                    }
+
+                    // Color it based on how relatively strong the gradient is
+                    mesh.surface->set_uniform_coloring(easy3d::vec4(0, 0, 0, 1));
+
+                    easy3d::VertexArrayObject::unmap_buffer(GL_ARRAY_BUFFER, mesh.surface->vertex_buffer());
                 }
-
-                // Put all of the markers inside of the asteroid to effectively
-                // hide them
-                for (std::size_t j = 0; j < mesh.triangle_points.size(); j++)
-                {
-                    vertex_buffer[j].x = 0;
-                    vertex_buffer[j].y = 0;
-                    vertex_buffer[j].z = 0;
-                }
-
-                // Color it based on how relatively strong the gradient is
-                mesh.surface->set_uniform_coloring(easy3d::vec4(0, 0, 0, 1));
-
-                easy3d::VertexArrayObject::unmap_buffer(GL_ARRAY_BUFFER, mesh.surface->vertex_buffer());
             }
         }
 
@@ -765,12 +821,14 @@ protected:
     Model& model;
 
     const double siphon_width;
+    const unsigned int num_latitudinal_gravity_gradient_marker_rings;
+    const unsigned int num_longitudinal_gravity_gradient_markers;
 
     DrawableMesh asteroid_mesh;
     DrawableMesh siphon_mesh;
     DrawableMesh collecting_satellite_mesh;
     std::vector<DrawableMesh> siphon_mass_meshes;
-    std::vector<GravityGradientMarkerMesh> gravity_gradient_marker_meshes;
+    std::vector<std::vector<DrawableMesh>> gravity_gradient_marker_meshes;
 
     std::chrono::time_point<std::chrono::system_clock> start_animation_time;
     std::chrono::time_point<std::chrono::system_clock> last_animation_time;
