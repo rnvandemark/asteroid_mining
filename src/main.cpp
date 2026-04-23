@@ -25,6 +25,7 @@ int main(int argc, char** argv)
     const double initial_bottom_lifting_side_mass_position = 0.0;
     const double initial_bottom_lifting_side_mass_velocity = 0.0;
 
+    const double siphon_width = 5;
     const double gravity_gradient_shell_radius = 2;
     const unsigned int gravity_gradient_phi_step = 20;
     const unsigned int gravity_gradient_theta_step = 20;
@@ -58,6 +59,7 @@ int main(int argc, char** argv)
     return am::View(
         dimensions_scaler,
         model,
+        siphon_width,
         gravity_gradient_shell_radius,
         gravity_gradient_phi_step,
         gravity_gradient_theta_step

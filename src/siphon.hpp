@@ -39,6 +39,8 @@ public:
         bottom_lifting_side_mass_position(initial_bottom_lifting_side_mass_position),
         bottom_lifting_side_mass_velocity(initial_bottom_lifting_side_mass_velocity),
         cs_payload_mass(0.0),
+        total_time_elapsed(0.0),
+        time_mass_reached_cs_last(0.0),
         mass_positions(n),
         mass_gravity_gradients(n)
     {
@@ -90,24 +92,54 @@ public:
         );
     }
 
+    double get_siphon_angular_position() const
+    {
+        return siphon_angular_position;
+    }
+
+    double get_cs_payload_mass() const
+    {
+        return cs_payload_mass;
+    }
+
+    bool get_mass_is_lifting(const unsigned int i) const
+    {
+        return i < n;
+    }
+
+    double get_mass_position(const unsigned int i) const
+    {
+        return mass_positions[i];
+    }
+
+    std::array<double, 3> get_mass_gravity_gradient(const unsigned int i) const
+    {
+        return mass_gravity_gradients[i];
+    }
+
     virtual void progress_over(const double dt) override
     {
+        total_time_elapsed += dt;
+
         // Update the first mass' position and chain's angular position
         siphon_angular_position += (siphon_angular_velocity * dt) + (0.5 * siphon_angular_acceleration * dt * dt);
         bottom_lifting_side_mass_position += (bottom_lifting_side_mass_velocity * dt) + (0.5 * bottom_lifting_side_mass_acceleration * dt * dt);
+
+        // Update the first mass' velocity and chain's angular velocity
+        siphon_angular_velocity += siphon_angular_acceleration * dt;
+        bottom_lifting_side_mass_velocity += bottom_lifting_side_mass_acceleration * dt;
 
         // Handle if a mass has reached the collecting satellite and a new mass
         // has become the "bottom lifting side mass"
         while (bottom_lifting_side_mass_position > max_bottom_lifting_side_mass_position)
         {
             // TODO model interaction with collecting satellite
-            std::cout << "PAYLOAD REACHED SATELLITE: " << bottom_lifting_side_mass_position << " vs " << max_bottom_lifting_side_mass_position << std::endl;
+            cs_payload_mass += payload_mass;
             bottom_lifting_side_mass_position -= max_bottom_lifting_side_mass_position;
+            bottom_lifting_side_mass_velocity *= ((n - 1) / n);
+            std::cout << "Payload reached collecting satellite, took " << (total_time_elapsed - time_mass_reached_cs_last) << " revs" << std::endl;
+            time_mass_reached_cs_last = total_time_elapsed;
         }
-
-        // Update the first mass' velocity and chain's angular velocity
-        siphon_angular_velocity += siphon_angular_acceleration * dt;
-        bottom_lifting_side_mass_velocity += bottom_lifting_side_mass_acceleration * dt;
 
         std::cout << "START LOOP:" << std::endl;
         std::cout << "- chain pos: " << siphon_angular_position << std::endl;
@@ -224,7 +256,6 @@ public:
 
     const double max_bottom_lifting_side_mass_position;
 
-protected:
     std::array<double, 3> calculate_effective_potential_cartesian_partials_on_chain_at(const double chain_position) const
     {
         const double net_chain_angle = anchor_point_polar_angle + siphon_angular_position;
@@ -235,6 +266,7 @@ protected:
         ));
     }
 
+protected:
     double siphon_angular_position;
     double siphon_angular_velocity;
     double siphon_angular_acceleration;
@@ -244,6 +276,9 @@ protected:
     double bottom_lifting_side_mass_acceleration;
 
     double cs_payload_mass;
+
+    double total_time_elapsed;
+    double time_mass_reached_cs_last;
 
     std::vector<double> mass_positions;
     std::vector<std::array<double, 3>> mass_gravity_gradients;

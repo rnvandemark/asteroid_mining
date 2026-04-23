@@ -114,6 +114,8 @@ public:
 
     AsteroidMiningViewer(
         const std::string& title,
+        const DimensionsScaler& dimensions_scaler_,
+        const Model& model_,
         const easy3d::vec4& bg_color = easy3d::vec4(0, 0, 0, 1),
         const int width = 1600,
         const int height = 1200,
@@ -132,6 +134,8 @@ public:
             width,
             height
         ),
+        dimensions_scaler(dimensions_scaler_),
+        model(model_),
         time_per_second(TimePerSecond::SECONDS_ONE),
         show_gravity_gradients(true),
         corotate_camera_with_asteroid(false)
@@ -271,16 +275,28 @@ protected:
             texter_->draw(framerate_, x, y, font_size, 1, font_color);
         }
 
-        y += font_size * 1.5f * dpi_scaling();
-        texter_->draw(desc, x, y, font_size, 1, font_color);
-
         if (!hint_.empty())
         {
             x += font_size * dpi_scaling();
             y += font_size * 1.5f * dpi_scaling();
             texter_->draw(hint_, x, y, font_size, easy3d::TextRenderer::ALIGN_LEFT, 1, font_color);
         }
+
+        y += font_size * 1.5f * dpi_scaling();
+        texter_->draw(desc, x, y, font_size, 1, font_color);
+
+        y += font_size * 1.5f * dpi_scaling();
+        texter_->draw(
+            "Harvested material: " + std::to_string(static_cast<int>(std::round(dimensions_scaler.get_dimensioned(
+                model.get_siphon().get_cs_payload_mass(),
+                DimensionsScaler::ScaleOpChain() * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::MASS)
+            )))) + " kg",
+            x, y, font_size, 1, font_color
+        );
     }
+
+    const DimensionsScaler& dimensions_scaler;
+    const Model& model;
 
     TimePerSecond time_per_second;
 
@@ -358,13 +374,17 @@ public:
     View(
         const DimensionsScaler& dimensions_scaler_,
         Model& model_,
+        const double siphon_width_,
         const double gravity_gradient_shell_radius,
         const unsigned int gravity_gradient_phi_step,
         const unsigned int gravity_gradient_theta_step
     ) :
-        window("Triaxial Ellipsoid Viewer"),
+        window("Triaxial Ellipsoid Viewer", dimensions_scaler_, model_),
         dimensions_scaler(dimensions_scaler_),
         model(model_),
+        siphon_width(dimensions_scaler.get_dimensionless(
+            siphon_width_, DimensionsScaler::ScaleOpChain() * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::DISTANCE)
+        )),
         asteroid_mesh(
             "asteroid",
             easy3d::SurfaceMeshFactory::icosphere(),
@@ -376,15 +396,20 @@ public:
         siphon_mesh(
             "siphon",
             create_cube_mesh(easy3d::vec3(0, 0, 0.5)),
-            easy3d::vec4(1, 0, 0, 1),
-            dimensions_scaler.get_dimensionless(
-                5, DimensionsScaler::ScaleOpChain() * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::DISTANCE)
-            ),
-            dimensions_scaler.get_dimensionless(
-                5, DimensionsScaler::ScaleOpChain() * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::DISTANCE)
-            ),
+            easy3d::vec4(0, 0, 1, 1),
+            siphon_width,
+            siphon_width,
             model.get_siphon().chain_length
         ),
+        collecting_satellite_mesh(
+            "collecting satellite",
+            create_cube_mesh(easy3d::vec3(0, 0, 0.5)),
+            easy3d::vec4(1, 0, 1, 1),
+            2 * siphon_width,
+            2 * siphon_width,
+            2 * siphon_width
+        ),
+        siphon_mass_meshes(),
         gravity_gradient_marker_meshes(),
         start_animation_time(),
         last_animation_time()
@@ -393,6 +418,28 @@ public:
 
         window.add_drawable(asteroid_mesh.surface);
         window.add_drawable(siphon_mesh.surface);
+        window.add_drawable(collecting_satellite_mesh.surface);
+
+        for (std::size_t i = 0; i < 2 * model.get_siphon().n; i++)
+        {
+            const auto siphon_mass_mesh = DrawableMesh(
+                "siphon mass/" + std::to_string(i),
+                create_cube_mesh(),
+                easy3d::vec4(0, 0, 0, 1),
+                dimensions_scaler.get_dimensionless(
+                    5, DimensionsScaler::ScaleOpChain() * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::DISTANCE)
+                ),
+                dimensions_scaler.get_dimensionless(
+                    5, DimensionsScaler::ScaleOpChain() * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::DISTANCE)
+                ),
+                dimensions_scaler.get_dimensionless(
+                    5, DimensionsScaler::ScaleOpChain() * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::DISTANCE)
+                )
+            );
+            siphon_mass_meshes.push_back(siphon_mass_mesh);
+            window.add_drawable(siphon_mass_mesh.surface);
+        }
+
         for (unsigned int theta_deg = 0; theta_deg <= 360; theta_deg += gravity_gradient_theta_step)
         {
             const float theta = theta_deg * M_PI / 180;
@@ -471,6 +518,7 @@ protected:
             * easy3d::Mat4<float>::rotation(easy3d::Quat<float>(easy3d::Vec<3, float>(0, 0, 1), siphon.anchor_point_polar_angle))
             * easy3d::Mat4<float>::translation(siphon.anchor_point_polar_radius, 0.0, 0.0)
             * easy3d::Mat4<float>::rotation(easy3d::Quat<float>(easy3d::Vec<3, float>(0, 1, 0), M_PI/2))
+            * easy3d::Mat4<float>::rotation(easy3d::Quat<float>(easy3d::Vec<3, float>(-1, 0, 0), siphon.get_siphon_angular_position()))
         ;
 
         {
@@ -521,10 +569,98 @@ protected:
             easy3d::VertexArrayObject::unmap_buffer(GL_ARRAY_BUFFER, siphon_mesh.surface->vertex_buffer());
         }
 
+        {
+            easy3d::vec3* const vertex_buffer = reinterpret_cast<easy3d::vec3*>(easy3d::VertexArrayObject::map_buffer(
+                GL_ARRAY_BUFFER, collecting_satellite_mesh.surface->vertex_buffer(), GL_WRITE_ONLY
+            ));
+            if (!vertex_buffer)
+            {
+                return false;
+            }
+
+            // Transform the collecting satellite's mesh
+            const easy3d::Mat4<float> T__siphon_base__collecting_satellite = easy3d::Mat4<float>::translation(0, 0, siphon.chain_length);
+            for (std::size_t i = 0; i < collecting_satellite_mesh.triangle_points.size(); i++)
+            {
+                const auto p = get_dimensioned(
+                    T__universe__siphon_base * T__siphon_base__collecting_satellite * collecting_satellite_mesh.triangle_points[i],
+                    DimensionsScaler::ScaleOpChain() * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::DISTANCE)
+                );
+                vertex_buffer[i].x = p.x;
+                vertex_buffer[i].y = p.y;
+                vertex_buffer[i].z = p.z;
+            }
+
+            easy3d::VertexArrayObject::unmap_buffer(GL_ARRAY_BUFFER, collecting_satellite_mesh.surface->vertex_buffer());
+        }
+
+        {
+            std::vector<std::array<double, 3>> gravity_gradients(siphon_mass_meshes.size());
+            std::vector<double> gravity_gradient_magnitudes(siphon_mass_meshes.size());
+            std::vector<bool> gravity_gradient_is_positives(gravity_gradient_marker_meshes.size());
+
+            const double net_siphon_chain_angle = siphon.anchor_point_polar_angle + siphon.get_siphon_angular_position();
+            const easy3d::vec2 net_siphon_direction(std::cos(net_siphon_chain_angle), std::sin(net_siphon_chain_angle));
+            for (std::size_t i = 0; i < siphon_mass_meshes.size(); i++)
+            {
+                gravity_gradients[i] = siphon.calculate_effective_potential_cartesian_partials_on_chain_at(siphon.get_mass_position(i));
+                gravity_gradient_magnitudes[i] = std::sqrt(
+                    (gravity_gradients[i][0] * gravity_gradients[i][0])
+                    + (gravity_gradients[i][1] * gravity_gradients[i][1])
+                    + (gravity_gradients[i][2] * gravity_gradients[i][2])
+                );
+                gravity_gradient_is_positives[i] = std::acos(
+                    easy3d::dot(net_siphon_direction, easy3d::vec2(gravity_gradients[i][0], gravity_gradients[i][1])) / gravity_gradient_magnitudes[i]
+                ) < (M_PI/2);
+            }
+
+            const double min_mag = *std::min_element(gravity_gradient_magnitudes.cbegin(), gravity_gradient_magnitudes.cend());
+            const double max_mag = *std::max_element(gravity_gradient_magnitudes.cbegin(), gravity_gradient_magnitudes.cend());
+
+            for (std::size_t i = 0; i < siphon_mass_meshes.size(); i++)
+            {
+                easy3d::vec3* const vertex_buffer = reinterpret_cast<easy3d::vec3*>(easy3d::VertexArrayObject::map_buffer(
+                    GL_ARRAY_BUFFER, siphon_mass_meshes[i].surface->vertex_buffer(), GL_WRITE_ONLY
+                ));
+                if (!vertex_buffer)
+                {
+                    return false;
+                }
+
+                const easy3d::Mat4<float> T__siphon_base__siphon_mass = easy3d::Mat4<float>::translation(
+                    0, siphon.get_mass_is_lifting(i) ? -siphon_width : siphon_width, siphon.get_mass_position(i)
+                );
+                const double relative_norm = (gravity_gradient_magnitudes[i] - min_mag) / (max_mag - min_mag);
+
+                // Transform the mesh of this mass on the siphon's chain
+                for (std::size_t j = 0; j < siphon_mass_meshes[i].triangle_points.size(); j++)
+                {
+                    const auto p = get_dimensioned(
+                        T__universe__siphon_base * T__siphon_base__siphon_mass * siphon_mass_meshes[i].triangle_points[j],
+                        DimensionsScaler::ScaleOpChain() * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::DISTANCE)
+                    );
+                    vertex_buffer[j].x = p.x;
+                    vertex_buffer[j].y = p.y;
+                    vertex_buffer[j].z = p.z;
+                }
+
+                // Color it based on how relatively strong and which direction
+                // the gradient is
+                siphon_mass_meshes[i].surface->set_uniform_coloring(easy3d::vec4(
+                    gravity_gradient_is_positives[i] ? 1-relative_norm : 1,
+                    gravity_gradient_is_positives[i] ? 1 : 1-relative_norm,
+                    1-relative_norm,
+                    1
+                ));
+
+                easy3d::VertexArrayObject::unmap_buffer(GL_ARRAY_BUFFER, siphon_mass_meshes[i].surface->vertex_buffer());
+            }
+        }
+
         if (window.showing_gravity_gradients())
         {
             std::vector<std::array<double, 3>> gravity_gradients(gravity_gradient_marker_meshes.size());
-            std::vector<float> gravity_gradient_magnitudes(gravity_gradient_marker_meshes.size());
+            std::vector<double> gravity_gradient_magnitudes(gravity_gradient_marker_meshes.size());
 
             for (std::size_t i = 0; i < gravity_gradient_marker_meshes.size(); i++)
             {
@@ -538,10 +674,8 @@ protected:
                 );
             }
 
-            const auto min_mag_iter = std::min_element(gravity_gradient_magnitudes.cbegin(), gravity_gradient_magnitudes.cend());
-            const auto max_mag_iter = std::max_element(gravity_gradient_magnitudes.cbegin(), gravity_gradient_magnitudes.cend());
-            const float min_mag = *min_mag_iter;
-            const float max_mag = *max_mag_iter;
+            const double min_mag = *std::min_element(gravity_gradient_magnitudes.cbegin(), gravity_gradient_magnitudes.cend());
+            const double max_mag = *std::max_element(gravity_gradient_magnitudes.cbegin(), gravity_gradient_magnitudes.cend());
 
             for (std::size_t i = 0; i < gravity_gradient_marker_meshes.size(); i++)
             {
@@ -552,7 +686,7 @@ protected:
                         q__universe__asteroid.rotate(easy3d::vec3(gravity_gradients[i][0], gravity_gradients[i][1], gravity_gradients[i][2])))
                     )
                 ;
-                const float relative_norm = (gravity_gradient_magnitudes[i] - min_mag) / (max_mag - min_mag);
+                const double relative_norm = (gravity_gradient_magnitudes[i] - min_mag) / (max_mag - min_mag);
 
                 easy3d::vec3* const vertex_buffer = reinterpret_cast<easy3d::vec3*>(easy3d::VertexArrayObject::map_buffer(
                     GL_ARRAY_BUFFER, mesh.surface->vertex_buffer(), GL_WRITE_ONLY
@@ -630,8 +764,12 @@ protected:
     const DimensionsScaler& dimensions_scaler;
     Model& model;
 
+    const double siphon_width;
+
     DrawableMesh asteroid_mesh;
     DrawableMesh siphon_mesh;
+    DrawableMesh collecting_satellite_mesh;
+    std::vector<DrawableMesh> siphon_mass_meshes;
     std::vector<GravityGradientMarkerMesh> gravity_gradient_marker_meshes;
 
     std::chrono::time_point<std::chrono::system_clock> start_animation_time;
