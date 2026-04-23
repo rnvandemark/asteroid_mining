@@ -41,6 +41,7 @@ public:
         cs_payload_mass(0.0),
         total_time_elapsed(0.0),
         time_mass_reached_cs_last(0.0),
+        time_elapsed_last_mass_to_reach_cs(0.0),
         mass_positions(n),
         mass_gravity_gradients(n)
     {
@@ -102,6 +103,11 @@ public:
         return cs_payload_mass;
     }
 
+    double get_time_elapsed_last_mass_to_reach_cs() const
+    {
+        return time_elapsed_last_mass_to_reach_cs;
+    }
+
     bool get_mass_is_lifting(const unsigned int i) const
     {
         return i < n;
@@ -133,11 +139,12 @@ public:
         // has become the "bottom lifting side mass"
         while (bottom_lifting_side_mass_position > max_bottom_lifting_side_mass_position)
         {
-            // TODO model interaction with collecting satellite
             cs_payload_mass += payload_mass;
+
             bottom_lifting_side_mass_position -= max_bottom_lifting_side_mass_position;
             bottom_lifting_side_mass_velocity *= ((n - 1) / n);
-            std::cout << "Payload reached collecting satellite, took " << (total_time_elapsed - time_mass_reached_cs_last) << " revs" << std::endl;
+
+            time_elapsed_last_mass_to_reach_cs = total_time_elapsed - time_mass_reached_cs_last;
             time_mass_reached_cs_last = total_time_elapsed;
         }
 
@@ -279,6 +286,7 @@ protected:
 
     double total_time_elapsed;
     double time_mass_reached_cs_last;
+    double time_elapsed_last_mass_to_reach_cs;
 
     std::vector<double> mass_positions;
     std::vector<std::array<double, 3>> mass_gravity_gradients;

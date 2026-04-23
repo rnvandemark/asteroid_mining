@@ -331,6 +331,15 @@ protected:
             )))) + " kg",
             x, y, font_size, 1, font_color
         );
+
+        y += font_size * 1.5f * dpi_scaling();
+        texter_->draw(
+            "Time elapsed between each mass: " + std::to_string(dimensions_scaler.get_dimensioned(
+                model.get_siphon().get_time_elapsed_last_mass_to_reach_cs() / 60,
+                DimensionsScaler::ScaleOpChain() * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::TIME)
+            )) + " min",
+            x, y, font_size, 1, font_color
+        );
     }
 
     const DimensionsScaler& dimensions_scaler;
