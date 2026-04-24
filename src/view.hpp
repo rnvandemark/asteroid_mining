@@ -452,7 +452,7 @@ public:
         released_payload_mesh(
             "released payload",
             easy3d::SurfaceMeshFactory::icosphere(),
-            easy3d::vec4(0, 1, 0, 1),
+            easy3d::vec4(0, 0, 0, 1),
             siphon_width,
             siphon_width,
             siphon_width
@@ -715,12 +715,13 @@ protected:
                 std::vector<double>(num_longitudinal_gravity_gradient_markers)
             );
 
+            // For each of these markers, calculate the gravity gradient at these locations
             for (unsigned int latitude = 0; latitude < num_latitudinal_gravity_gradient_marker_rings; latitude++)
             {
-                const double theta = latitude * M_PI / (num_latitudinal_gravity_gradient_marker_rings + 1);
+                const double theta = (latitude + 1) * M_PI / num_latitudinal_gravity_gradient_marker_rings;
                 for (unsigned int longitude = 0; longitude < num_longitudinal_gravity_gradient_markers; longitude++)
                 {
-                    const double phi = longitude * 2 * M_PI / (num_longitudinal_gravity_gradient_markers + 1);
+                    const double phi = longitude * 2 * M_PI / num_longitudinal_gravity_gradient_markers;
                     gravity_gradient_marker_positions[latitude][longitude].x = gravity_gradients_radius * std::sin(theta) * std::cos(phi);
                     gravity_gradient_marker_positions[latitude][longitude].y = gravity_gradients_radius * std::sin(theta) * std::sin(phi);
                     gravity_gradient_marker_positions[latitude][longitude].z = gravity_gradients_radius * std::cos(theta);
@@ -773,7 +774,7 @@ protected:
                         return false;
                     }
 
-                    // For each of these markers, calculate the gravity gradient at these locations
+                    // Transform the mesh of this gravity gradient marker
                     for (std::size_t j = 0; j < mesh.triangle_points.size(); j++)
                     {
                         const auto p = get_dimensioned(
@@ -817,7 +818,6 @@ protected:
                         vertex_buffer[j].z = 0;
                     }
 
-                    // Color it based on how relatively strong the gradient is
                     mesh.surface->set_uniform_coloring(easy3d::vec4(0, 0, 0, 1));
 
                     easy3d::VertexArrayObject::unmap_buffer(GL_ARRAY_BUFFER, mesh.surface->vertex_buffer());
@@ -851,6 +851,8 @@ protected:
                 vertex_buffer[i].z = p.z;
             }
 
+            released_payload_mesh.surface->set_uniform_coloring(easy3d::vec4(0, 1, 0, 1));
+
             easy3d::VertexArrayObject::unmap_buffer(GL_ARRAY_BUFFER, released_payload_mesh.surface->vertex_buffer());
         }
         else
@@ -872,7 +874,6 @@ protected:
                 vertex_buffer[j].z = 0;
             }
 
-            // Color it based on how relatively strong the gradient is
             released_payload_mesh.surface->set_uniform_coloring(easy3d::vec4(0, 0, 0, 1));
 
             easy3d::VertexArrayObject::unmap_buffer(GL_ARRAY_BUFFER, released_payload_mesh.surface->vertex_buffer());

@@ -36,8 +36,10 @@ public:
         max_bottom_lifting_side_mass_position(chain_length / n),
         siphon_angular_position(initial_siphon_angular_position),
         siphon_angular_velocity(initial_siphon_angular_velocity),
+        siphon_angular_acceleration(0.0),
         bottom_lifting_side_mass_position(initial_bottom_lifting_side_mass_position),
         bottom_lifting_side_mass_velocity(initial_bottom_lifting_side_mass_velocity),
+        bottom_lifting_side_mass_acceleration(0.0),
         cs_payload_mass(0.0),
         total_time_elapsed(0.0),
         time_mass_reached_cs_last(0.0),
@@ -123,7 +125,7 @@ public:
         return mass_positions[i];
     }
 
-    std::array<double, 3> get_mass_gravity_gradient(const unsigned int i) const
+    const std::array<double, 3>& get_mass_gravity_gradient(const unsigned int i) const
     {
         return mass_gravity_gradients[i];
     }
@@ -158,15 +160,6 @@ public:
             time_mass_reached_cs_last = total_time_elapsed;
         }
 
-        std::cout << "START LOOP:" << std::endl;
-        std::cout << "- chain pos: " << siphon_angular_position << std::endl;
-        std::cout << "- chain vel: " << siphon_angular_velocity << std::endl;
-        std::cout << "- chain acc: " << siphon_angular_acceleration << std::endl;
-        std::cout << "- mass pos:  " << bottom_lifting_side_mass_position << std::endl;
-        std::cout << "- mass vel:  " << bottom_lifting_side_mass_velocity << std::endl;
-        std::cout << "- mass acc:  " << bottom_lifting_side_mass_acceleration << std::endl;
-
-        std::cout << "Mass gravity gradients:" << std::endl;
         for (std::size_t m = 0; m < 2 * n; m++)
         {
             mass_positions[m] = (
@@ -175,23 +168,17 @@ public:
                 : (chain_length - (bottom_lifting_side_mass_position + ((m - n) * max_bottom_lifting_side_mass_position)))
             );
             mass_gravity_gradients[m] = calculate_effective_potential_cartesian_partials_on_chain_at(mass_positions[m]);
-            std::cout << "- " << m << ": at " << mass_positions[m] << " -> [" << mass_gravity_gradients[m][0] << ", " << mass_gravity_gradients[m][1] << ", " << mass_gravity_gradients[m][2] << "]" << std::endl;
         }
 
         const double net_chain_angle = anchor_point_polar_angle + siphon_angular_position;
         const double cs_total_mass = cs_payload_mass + cs_dry_mass;
         const auto cs_gravity_gradient = calculate_effective_potential_cartesian_partials_on_chain_at(chain_length);
 
-        std::cout << "Force/torque/moment contributions:" << std::endl;
         double net_radial_force = 0;
         double net_torque = cs_total_mass * chain_length * (
             (cs_gravity_gradient[0] * -std::sin(net_chain_angle)) + (cs_gravity_gradient[1] * std::cos(net_chain_angle))
         );
         double net_moment = cs_total_mass * chain_length * chain_length;
-        std::cout << "- collecting satellite:" << std::endl;
-        std::cout << "-- force: 0.0" << std::endl;
-        std::cout << "-- torque: " << net_torque << std::endl;
-        std::cout << "-- moment: " << net_moment << std::endl;
         for (std::size_t m = 0; m < n; m++)
         {
             const double mass_radial_force = lifting_side_mass * (
@@ -208,15 +195,6 @@ public:
             net_radial_force += mass_radial_force;
             net_torque += mass_torque;
             net_moment += mass_moment;
-
-            std::cout << "- mass " << m << ":" << std::endl;
-            std::cout << "-- force: " << mass_radial_force << std::endl;
-            std::cout << "-- torque: " << mass_torque << std::endl;
-            std::cout << "-- moment: " << mass_moment << std::endl;
-            std::cout << "-- lifting side mass: " << lifting_side_mass << std::endl;
-            std::cout << "-- gravity gradient: [" << mass_gravity_gradients[m][0] << ", " << mass_gravity_gradients[m][1] << ", " << mass_gravity_gradients[m][2] << "]" << std::endl;
-            std::cout << "-- contribution 1: " << (mass_gravity_gradients[m][0] * std::cos(net_chain_angle)) << std::endl;
-            std::cout << "-- contribution 2: " << (mass_gravity_gradients[m][1] * std::sin(net_chain_angle)) << std::endl;
         }
         for (std::size_t m = n; m < 2 * n; m++)
         {
@@ -234,25 +212,10 @@ public:
             net_radial_force += mass_radial_force;
             net_torque += mass_torque;
             net_moment += mass_moment;
-
-            std::cout << "- mass " << m << ":" << std::endl;
-            std::cout << "-- force: " << mass_radial_force << std::endl;
-            std::cout << "-- torque: " << mass_torque << std::endl;
-            std::cout << "-- moment: " << mass_moment << std::endl;
         }
 
         bottom_lifting_side_mass_acceleration = net_radial_force / (n * (1 + descending_side_mass));
         siphon_angular_acceleration = net_torque / net_moment;
-
-        std::cout << "END LOOP:" << std::endl;
-        std::cout << "- force:     " << net_radial_force << std::endl;
-        std::cout << "- torque:    " << net_torque << std::endl;
-        std::cout << "- chain pos: " << siphon_angular_position << std::endl;
-        std::cout << "- chain vel: " << siphon_angular_velocity << std::endl;
-        std::cout << "- chain acc: " << siphon_angular_acceleration << std::endl;
-        std::cout << "- mass pos:  " << bottom_lifting_side_mass_position << std::endl;
-        std::cout << "- mass vel:  " << bottom_lifting_side_mass_velocity << std::endl;
-        std::cout << "- mass acc:  " << bottom_lifting_side_mass_acceleration << std::endl;
     }
 
     const Asteroid& asteroid;

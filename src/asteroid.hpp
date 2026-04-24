@@ -72,7 +72,7 @@ public:
         rotation += (dt * angular_velocity);
     }
 
-    bool is_point_within(const easy3d::vec3& p)
+    bool is_point_within(const easy3d::vec3& p) const
     {
         const double x = p.x / alpha;
         const double y = p.y / beta;
