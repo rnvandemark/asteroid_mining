@@ -45,7 +45,7 @@ public:
         time_mass_reached_cs_last(0.0),
         time_elapsed_last_mass_to_reach_cs(0.0),
         mass_positions(n),
-        mass_gravity_gradients(n)
+        mass_effective_forces(n)
     {
         std::cout << "Siphon characteristics:" << std::endl;
         std::cout << "- number of payloads on each side: " << n << std::endl;
@@ -125,9 +125,9 @@ public:
         return mass_positions[i];
     }
 
-    const std::array<double, 3>& get_mass_gravity_gradient(const unsigned int i) const
+    const std::array<double, 3>& get_mass_effective_force(const unsigned int i) const
     {
-        return mass_gravity_gradients[i];
+        return mass_effective_forces[i];
     }
 
     void clear_cs_payload_mass()
@@ -167,27 +167,27 @@ public:
                 ? (bottom_lifting_side_mass_position + (m * max_bottom_lifting_side_mass_position))
                 : (chain_length - (bottom_lifting_side_mass_position + ((m - n) * max_bottom_lifting_side_mass_position)))
             );
-            mass_gravity_gradients[m] = calculate_effective_potential_cartesian_partials_on_chain_at(mass_positions[m]);
+            mass_effective_forces[m] = calculate_cartesian_effective_force_on_chain_at(mass_positions[m]);
         }
 
         const double net_chain_angle = anchor_point_polar_angle + siphon_angular_position;
         const double cs_total_mass = cs_payload_mass + cs_dry_mass;
-        const auto cs_gravity_gradient = calculate_effective_potential_cartesian_partials_on_chain_at(chain_length);
+        const auto cs_effective_force = calculate_cartesian_effective_force_on_chain_at(chain_length);
 
         double net_radial_force = 0;
         double net_torque = cs_total_mass * chain_length * (
-            (cs_gravity_gradient[0] * -std::sin(net_chain_angle)) + (cs_gravity_gradient[1] * std::cos(net_chain_angle))
+            (cs_effective_force[0] * -std::sin(net_chain_angle)) + (cs_effective_force[1] * std::cos(net_chain_angle))
         );
         double net_moment = cs_total_mass * chain_length * chain_length;
         for (std::size_t m = 0; m < n; m++)
         {
             const double mass_radial_force = lifting_side_mass * (
-                ((mass_gravity_gradients[m][0] * std::cos(net_chain_angle)) + (mass_gravity_gradients[m][1] * std::sin(net_chain_angle)))
+                ((mass_effective_forces[m][0] * std::cos(net_chain_angle)) + (mass_effective_forces[m][1] * std::sin(net_chain_angle)))
                 + (mass_positions[m] * siphon_angular_velocity * siphon_angular_velocity)
                 + (2 * siphon_angular_velocity * mass_positions[m])
             );
             const double mass_torque = mass_positions[m] * (
-                ((mass_gravity_gradients[m][0] * -std::sin(net_chain_angle)) + (mass_gravity_gradients[m][1] * std::cos(net_chain_angle)))
+                ((mass_effective_forces[m][0] * -std::sin(net_chain_angle)) + (mass_effective_forces[m][1] * std::cos(net_chain_angle)))
                 - (2 * (1 + siphon_angular_velocity) * bottom_lifting_side_mass_velocity)
             );
             const double mass_moment = lifting_side_mass * mass_positions[m] * mass_positions[m];
@@ -199,12 +199,12 @@ public:
         for (std::size_t m = n; m < 2 * n; m++)
         {
             const double mass_radial_force = -descending_side_mass * (
-                ((mass_gravity_gradients[m][0] * std::cos(net_chain_angle)) + (mass_gravity_gradients[m][1] * std::sin(net_chain_angle)))
+                ((mass_effective_forces[m][0] * std::cos(net_chain_angle)) + (mass_effective_forces[m][1] * std::sin(net_chain_angle)))
                 + (mass_positions[m] * siphon_angular_velocity * siphon_angular_velocity)
                 + (2 * siphon_angular_velocity * mass_positions[m])
             );
             const double mass_torque = mass_positions[m] * descending_side_mass * (
-                ((mass_gravity_gradients[m][1] * -std::sin(net_chain_angle)) + (mass_gravity_gradients[m][1] * std::cos(net_chain_angle)))
+                ((mass_effective_forces[m][1] * -std::sin(net_chain_angle)) + (mass_effective_forces[m][1] * std::cos(net_chain_angle)))
                 + (2 * (1 + siphon_angular_velocity) * bottom_lifting_side_mass_velocity)
             );
             const double mass_moment = descending_side_mass * mass_positions[m] * mass_positions[m];
@@ -246,9 +246,9 @@ public:
         );
     }
 
-    std::array<double, 3> calculate_effective_potential_cartesian_partials_on_chain_at(const double chain_position) const
+    std::array<double, 3> calculate_cartesian_effective_force_on_chain_at(const double chain_position) const
     {
-        return asteroid.calculate_effective_potential_cartesian_partials_at(get_position_in_asteroid_frame(chain_position));
+        return asteroid.calculate_cartesian_effective_force_at(get_position_in_asteroid_frame(chain_position));
     }
 
 protected:
@@ -267,7 +267,7 @@ protected:
     double time_elapsed_last_mass_to_reach_cs;
 
     std::vector<double> mass_positions;
-    std::vector<std::array<double, 3>> mass_gravity_gradients;
+    std::vector<std::array<double, 3>> mass_effective_forces;
 };
 
 }

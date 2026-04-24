@@ -169,7 +169,7 @@ namespace am {
         return lambda;
     }
 
-    std::array<double, 3> calculate_effective_potential_cartesian_partials(
+    std::array<double, 3> calculate_cartesian_effective_force(
         const double beta,
         const double gamma,
         const double omega,

@@ -138,8 +138,8 @@ public:
         dimensions_scaler(dimensions_scaler_),
         model(model_),
         time_per_second(TimePerSecond::SECONDS_ONE),
-        show_gravity_gradients(true),
-        gravity_gradients_radius(1.5),
+        show_effective_forces(true),
+        effective_force_markers_radius(1.5),
         corotate_camera_with_asteroid(false)
     {
         show_easy3d_logo_ = false;
@@ -158,7 +158,7 @@ public:
         );
 
         bind(
-            [this](easy3d::Viewer*, easy3d::Model*) -> bool { show_gravity_gradients = (!show_gravity_gradients); return true; },
+            [this](easy3d::Viewer*, easy3d::Model*) -> bool { show_effective_forces = (!show_effective_forces); return true; },
             nullptr,
             easy3d::Viewer::KEY_G
         );
@@ -170,23 +170,23 @@ public:
         );
 
         bind(
-            [this](easy3d::Viewer*, easy3d::Model*) -> bool { change_gravity_gradients_radius_callback(false, false); return true; },
+            [this](easy3d::Viewer*, easy3d::Model*) -> bool { change_effective_force_markers_radius_callback(false, false); return true; },
             nullptr,
             easy3d::Viewer::KEY_O
         );
         bind(
-            [this](easy3d::Viewer*, easy3d::Model*) -> bool { change_gravity_gradients_radius_callback(true, false); return true; },
+            [this](easy3d::Viewer*, easy3d::Model*) -> bool { change_effective_force_markers_radius_callback(true, false); return true; },
             nullptr,
             easy3d::Viewer::KEY_P
         );
         bind(
-            [this](easy3d::Viewer*, easy3d::Model*) -> bool { change_gravity_gradients_radius_callback(false, true); return true; },
+            [this](easy3d::Viewer*, easy3d::Model*) -> bool { change_effective_force_markers_radius_callback(false, true); return true; },
             nullptr,
             easy3d::Viewer::KEY_O,
             easy3d::Viewer::MODIF_SHIFT
         );
         bind(
-            [this](easy3d::Viewer*, easy3d::Model*) -> bool { change_gravity_gradients_radius_callback(true, true); return true; },
+            [this](easy3d::Viewer*, easy3d::Model*) -> bool { change_effective_force_markers_radius_callback(true, true); return true; },
             nullptr,
             easy3d::Viewer::KEY_P,
             easy3d::Viewer::MODIF_SHIFT
@@ -204,14 +204,14 @@ public:
         return static_cast<int>(time_per_second);
     }
 
-    bool showing_gravity_gradients() const
+    bool showing_effective_forces() const
     {
-        return show_gravity_gradients;
+        return show_effective_forces;
     }
 
-    double get_gravity_gradients_radius() const
+    double get_effective_force_markers_radius() const
     {
-        return gravity_gradients_radius;
+        return effective_force_markers_radius;
     }
 
     bool corotating_camera_with_asteroid() const
@@ -254,10 +254,10 @@ protected:
         }
     }
 
-    void change_gravity_gradients_radius_callback(const bool incremented, const bool accelerated)
+    void change_effective_force_markers_radius_callback(const bool incremented, const bool accelerated)
     {
-        gravity_gradients_radius = std::max(
-            gravity_gradients_radius + ((incremented ? 1 : -1) * (accelerated ? 0.1 : 0.01)),
+        effective_force_markers_radius = std::max(
+            effective_force_markers_radius + ((incremented ? 1 : -1) * (accelerated ? 0.1 : 0.01)),
             1.01
         );
     }
@@ -353,8 +353,8 @@ protected:
 
     TimePerSecond time_per_second;
 
-    bool show_gravity_gradients;
-    double gravity_gradients_radius;
+    bool show_effective_forces;
+    double effective_force_markers_radius;
 
     bool corotate_camera_with_asteroid;
 };
@@ -414,8 +414,8 @@ public:
         const DimensionsScaler& dimensions_scaler_,
         Model& model_,
         const double siphon_width_,
-        const unsigned int num_latitudinal_gravity_gradient_marker_rings_,
-        const unsigned int num_longitudinal_gravity_gradient_markers_
+        const unsigned int num_latitudinal_effective_force_marker_rings_,
+        const unsigned int num_longitudinal_effective_force_markers_
     ) :
         window("Triaxial Ellipsoid Viewer", dimensions_scaler_, model_),
         dimensions_scaler(dimensions_scaler_),
@@ -423,8 +423,8 @@ public:
         siphon_width(dimensions_scaler.get_dimensionless(
             siphon_width_, DimensionsScaler::ScaleOpChain() * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::DISTANCE)
         )),
-        num_latitudinal_gravity_gradient_marker_rings(num_latitudinal_gravity_gradient_marker_rings_),
-        num_longitudinal_gravity_gradient_markers(num_longitudinal_gravity_gradient_markers_),
+        num_latitudinal_effective_force_marker_rings(num_latitudinal_effective_force_marker_rings_),
+        num_longitudinal_effective_force_markers(num_longitudinal_effective_force_markers_),
         asteroid_mesh(
             "asteroid",
             easy3d::SurfaceMeshFactory::icosphere(),
@@ -458,7 +458,7 @@ public:
             siphon_width
         ),
         siphon_mass_meshes(),
-        gravity_gradient_marker_meshes(),
+        effective_force_marker_meshes(),
         start_animation_time(),
         last_animation_time()
     {
@@ -489,13 +489,13 @@ public:
             window.add_drawable(siphon_mass_mesh.surface);
         }
 
-        gravity_gradient_marker_meshes.resize(num_latitudinal_gravity_gradient_marker_rings);
-        for (unsigned int latitude = 0; latitude < num_latitudinal_gravity_gradient_marker_rings; latitude++)
+        effective_force_marker_meshes.resize(num_latitudinal_effective_force_marker_rings);
+        for (unsigned int latitude = 0; latitude < num_latitudinal_effective_force_marker_rings; latitude++)
         {
-            for (unsigned int longitude = 0; longitude < num_longitudinal_gravity_gradient_markers; longitude++)
+            for (unsigned int longitude = 0; longitude < num_longitudinal_effective_force_markers; longitude++)
             {
-                const auto gravity_gradient_marker_mesh = DrawableMesh(
-                    "gravity gradient marker/" + std::to_string(latitude) + "/" + std::to_string(longitude),
+                const auto effective_force_marker_mesh = DrawableMesh(
+                    "effective force marker/" + std::to_string(latitude) + "/" + std::to_string(longitude),
                     create_arrow_mesh(),
                     easy3d::vec4(0, 0, 0, 1),
                     dimensions_scaler.get_dimensionless(
@@ -508,8 +508,8 @@ public:
                         15, DimensionsScaler::ScaleOpChain() * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::DISTANCE)
                     )
                 );
-                gravity_gradient_marker_meshes[latitude].push_back(gravity_gradient_marker_mesh);
-                window.add_drawable(gravity_gradient_marker_mesh.surface);
+                effective_force_marker_meshes[latitude].push_back(effective_force_marker_mesh);
+                window.add_drawable(effective_force_marker_mesh.surface);
             }
         }
 
@@ -637,27 +637,27 @@ protected:
         }
 
         {
-            std::vector<std::array<double, 3>> gravity_gradients(siphon_mass_meshes.size());
-            std::vector<double> gravity_gradient_magnitudes(siphon_mass_meshes.size());
-            std::vector<bool> gravity_gradient_is_positives(gravity_gradient_marker_meshes.size());
+            std::vector<std::array<double, 3>> effective_forces(siphon_mass_meshes.size());
+            std::vector<double> effective_force_magnitudes(siphon_mass_meshes.size());
+            std::vector<bool> effective_force_is_positives(effective_force_marker_meshes.size());
 
             const double net_siphon_chain_angle = siphon.anchor_point_polar_angle + siphon.get_siphon_angular_position();
             const easy3d::vec2 net_siphon_direction(std::cos(net_siphon_chain_angle), std::sin(net_siphon_chain_angle));
             for (std::size_t i = 0; i < siphon_mass_meshes.size(); i++)
             {
-                gravity_gradients[i] = siphon.calculate_effective_potential_cartesian_partials_on_chain_at(siphon.get_mass_position(i));
-                gravity_gradient_magnitudes[i] = std::sqrt(
-                    (gravity_gradients[i][0] * gravity_gradients[i][0])
-                    + (gravity_gradients[i][1] * gravity_gradients[i][1])
-                    + (gravity_gradients[i][2] * gravity_gradients[i][2])
+                effective_forces[i] = siphon.calculate_cartesian_effective_force_on_chain_at(siphon.get_mass_position(i));
+                effective_force_magnitudes[i] = std::sqrt(
+                    (effective_forces[i][0] * effective_forces[i][0])
+                    + (effective_forces[i][1] * effective_forces[i][1])
+                    + (effective_forces[i][2] * effective_forces[i][2])
                 );
-                gravity_gradient_is_positives[i] = std::acos(
-                    easy3d::dot(net_siphon_direction, easy3d::vec2(gravity_gradients[i][0], gravity_gradients[i][1])) / gravity_gradient_magnitudes[i]
+                effective_force_is_positives[i] = std::acos(
+                    easy3d::dot(net_siphon_direction, easy3d::vec2(effective_forces[i][0], effective_forces[i][1])) / effective_force_magnitudes[i]
                 ) < (M_PI/2);
             }
 
-            const double min_mag = *std::min_element(gravity_gradient_magnitudes.cbegin(), gravity_gradient_magnitudes.cend());
-            const double max_mag = *std::max_element(gravity_gradient_magnitudes.cbegin(), gravity_gradient_magnitudes.cend());
+            const double min_mag = *std::min_element(effective_force_magnitudes.cbegin(), effective_force_magnitudes.cend());
+            const double max_mag = *std::max_element(effective_force_magnitudes.cbegin(), effective_force_magnitudes.cend());
 
             for (std::size_t i = 0; i < siphon_mass_meshes.size(); i++)
             {
@@ -672,7 +672,7 @@ protected:
                 const easy3d::Mat4<float> T__siphon_base__siphon_mass = easy3d::Mat4<float>::translation(
                     0, siphon.get_mass_is_lifting(i) ? -siphon_width : siphon_width, siphon.get_mass_position(i)
                 );
-                const double relative_norm = (gravity_gradient_magnitudes[i] - min_mag) / (max_mag - min_mag);
+                const double relative_mag = (effective_force_magnitudes[i] - min_mag) / (max_mag - min_mag);
 
                 // Transform the mesh of this mass on the siphon's chain
                 for (std::size_t j = 0; j < siphon_mass_meshes[i].triangle_points.size(); j++)
@@ -687,11 +687,11 @@ protected:
                 }
 
                 // Color it based on how relatively strong and which direction
-                // the gradient is
+                // the effective force is
                 siphon_mass_meshes[i].surface->set_uniform_coloring(easy3d::vec4(
-                    gravity_gradient_is_positives[i] ? 1-relative_norm : 1,
-                    gravity_gradient_is_positives[i] ? 1 : 1-relative_norm,
-                    1-relative_norm,
+                    effective_force_is_positives[i] ? 1-relative_mag : 1,
+                    effective_force_is_positives[i] ? 1 : 1-relative_mag,
+                    1-relative_mag,
                     1
                 ));
 
@@ -699,46 +699,47 @@ protected:
             }
         }
 
-        if (window.showing_gravity_gradients())
+        if (window.showing_effective_forces())
         {
-            const double gravity_gradients_radius = window.get_gravity_gradients_radius();
-            std::vector<std::vector<easy3d::vec3>> gravity_gradient_marker_positions(
-                num_latitudinal_gravity_gradient_marker_rings,
-                std::vector<easy3d::vec3>(num_longitudinal_gravity_gradient_markers)
+            const double effective_forces_radius = window.get_effective_force_markers_radius();
+            std::vector<std::vector<easy3d::vec3>> effective_force_marker_positions(
+                num_latitudinal_effective_force_marker_rings,
+                std::vector<easy3d::vec3>(num_longitudinal_effective_force_markers)
             );
-            std::vector<std::vector<std::array<double, 3>>> gravity_gradients(
-                num_latitudinal_gravity_gradient_marker_rings,
-                std::vector<std::array<double, 3>>(num_longitudinal_gravity_gradient_markers)
+            std::vector<std::vector<std::array<double, 3>>> effective_forces(
+                num_latitudinal_effective_force_marker_rings,
+                std::vector<std::array<double, 3>>(num_longitudinal_effective_force_markers)
             );
-            std::vector<std::vector<double>> gravity_gradient_magnitudes(
-                num_latitudinal_gravity_gradient_marker_rings,
-                std::vector<double>(num_longitudinal_gravity_gradient_markers)
+            std::vector<std::vector<double>> effective_force_magnitudes(
+                num_latitudinal_effective_force_marker_rings,
+                std::vector<double>(num_longitudinal_effective_force_markers)
             );
 
-            // For each of these markers, calculate the gravity gradient at these locations
-            for (unsigned int latitude = 0; latitude < num_latitudinal_gravity_gradient_marker_rings; latitude++)
+            // For each of these markers, calculate the effective force at
+            // these locations
+            for (unsigned int latitude = 0; latitude < num_latitudinal_effective_force_marker_rings; latitude++)
             {
-                const double theta = (latitude + 1) * M_PI / num_latitudinal_gravity_gradient_marker_rings;
-                for (unsigned int longitude = 0; longitude < num_longitudinal_gravity_gradient_markers; longitude++)
+                const double theta = (latitude + 1) * M_PI / num_latitudinal_effective_force_marker_rings;
+                for (unsigned int longitude = 0; longitude < num_longitudinal_effective_force_markers; longitude++)
                 {
-                    const double phi = longitude * 2 * M_PI / num_longitudinal_gravity_gradient_markers;
-                    gravity_gradient_marker_positions[latitude][longitude].x = gravity_gradients_radius * std::sin(theta) * std::cos(phi);
-                    gravity_gradient_marker_positions[latitude][longitude].y = gravity_gradients_radius * std::sin(theta) * std::sin(phi);
-                    gravity_gradient_marker_positions[latitude][longitude].z = gravity_gradients_radius * std::cos(theta);
-                    gravity_gradients[latitude][longitude] = asteroid.calculate_effective_potential_cartesian_partials_at(
-                        q__asteroid__universe.rotate(gravity_gradient_marker_positions[latitude][longitude])
+                    const double phi = longitude * 2 * M_PI / num_longitudinal_effective_force_markers;
+                    effective_force_marker_positions[latitude][longitude].x = effective_forces_radius * std::sin(theta) * std::cos(phi);
+                    effective_force_marker_positions[latitude][longitude].y = effective_forces_radius * std::sin(theta) * std::sin(phi);
+                    effective_force_marker_positions[latitude][longitude].z = effective_forces_radius * std::cos(theta);
+                    effective_forces[latitude][longitude] = asteroid.calculate_cartesian_effective_force_at(
+                        q__asteroid__universe.rotate(effective_force_marker_positions[latitude][longitude])
                     );
-                    gravity_gradient_magnitudes[latitude][longitude] = std::sqrt(
-                        (gravity_gradients[latitude][longitude][0] * gravity_gradients[latitude][longitude][0])
-                        + (gravity_gradients[latitude][longitude][1] * gravity_gradients[latitude][longitude][1])
-                        + (gravity_gradients[latitude][longitude][2] * gravity_gradients[latitude][longitude][2])
+                    effective_force_magnitudes[latitude][longitude] = std::sqrt(
+                        (effective_forces[latitude][longitude][0] * effective_forces[latitude][longitude][0])
+                        + (effective_forces[latitude][longitude][1] * effective_forces[latitude][longitude][1])
+                        + (effective_forces[latitude][longitude][2] * effective_forces[latitude][longitude][2])
                     );
                 }
             }
 
-            const std::vector<double> flattened_gravity_gradient_magnitudes = std::accumulate(
-                gravity_gradient_magnitudes.cbegin(),
-                gravity_gradient_magnitudes.cend(),
+            const std::vector<double> flattened_effective_force_magnitudes = std::accumulate(
+                effective_force_magnitudes.cbegin(),
+                effective_force_magnitudes.cend(),
                 std::vector<double>(),
                 [] (std::vector<double>& a, const std::vector<double>& b)
                 {
@@ -746,25 +747,25 @@ protected:
                     return a;
                 }
             );
-            const double min_mag = *std::min_element(flattened_gravity_gradient_magnitudes.cbegin(), flattened_gravity_gradient_magnitudes.cend());
-            const double max_mag = *std::max_element(flattened_gravity_gradient_magnitudes.cbegin(), flattened_gravity_gradient_magnitudes.cend());
+            const double min_mag = *std::min_element(flattened_effective_force_magnitudes.cbegin(), flattened_effective_force_magnitudes.cend());
+            const double max_mag = *std::max_element(flattened_effective_force_magnitudes.cbegin(), flattened_effective_force_magnitudes.cend());
 
-            for (unsigned int latitude = 0; latitude < num_latitudinal_gravity_gradient_marker_rings; latitude++)
+            for (unsigned int latitude = 0; latitude < num_latitudinal_effective_force_marker_rings; latitude++)
             {
-                for (unsigned int longitude = 0; longitude < num_longitudinal_gravity_gradient_markers; longitude++)
+                for (unsigned int longitude = 0; longitude < num_longitudinal_effective_force_markers; longitude++)
                 {
-                    const auto& mesh = gravity_gradient_marker_meshes[latitude][longitude];
-                    const auto T__marker__CoG = easy3d::Mat4<float>::translation(gravity_gradient_marker_positions[latitude][longitude])
+                    const auto& mesh = effective_force_marker_meshes[latitude][longitude];
+                    const auto T__marker__CoG = easy3d::Mat4<float>::translation(effective_force_marker_positions[latitude][longitude])
                         * easy3d::Mat4<float>(rotation_to_align(
                             easy3d::vec3(0, 0, 1),
                             q__universe__asteroid.rotate(easy3d::vec3(
-                                gravity_gradients[latitude][longitude][0],
-                                gravity_gradients[latitude][longitude][1],
-                                gravity_gradients[latitude][longitude][2]
+                                effective_forces[latitude][longitude][0],
+                                effective_forces[latitude][longitude][1],
+                                effective_forces[latitude][longitude][2]
                             ))
                         ))
                     ;
-                    const double relative_norm = (gravity_gradient_magnitudes[latitude][longitude] - min_mag) / (max_mag - min_mag);
+                    const double relative_mag = (effective_force_magnitudes[latitude][longitude] - min_mag) / (max_mag - min_mag);
 
                     easy3d::vec3* const vertex_buffer = reinterpret_cast<easy3d::vec3*>(easy3d::VertexArrayObject::map_buffer(
                         GL_ARRAY_BUFFER, mesh.surface->vertex_buffer(), GL_WRITE_ONLY
@@ -774,7 +775,7 @@ protected:
                         return false;
                     }
 
-                    // Transform the mesh of this gravity gradient marker
+                    // Transform the mesh of this effective force marker
                     for (std::size_t j = 0; j < mesh.triangle_points.size(); j++)
                     {
                         const auto p = get_dimensioned(
@@ -786,8 +787,9 @@ protected:
                         vertex_buffer[j].z = p.z;
                     }
 
-                    // Color it based on how relatively strong the gradient is
-                    mesh.surface->set_uniform_coloring(easy3d::vec4(1, 1-relative_norm, 1-relative_norm, 1));
+                    // Color it based on how relatively strong the effective
+                    // force is
+                    mesh.surface->set_uniform_coloring(easy3d::vec4(1, 1-relative_mag, 1-relative_mag, 1));
 
                     easy3d::VertexArrayObject::unmap_buffer(GL_ARRAY_BUFFER, mesh.surface->vertex_buffer());
                 }
@@ -795,11 +797,11 @@ protected:
         }
         else
         {
-            for (unsigned int latitude = 0; latitude < num_latitudinal_gravity_gradient_marker_rings; latitude++)
+            for (unsigned int latitude = 0; latitude < num_latitudinal_effective_force_marker_rings; latitude++)
             {
-                for (unsigned int longitude = 0; longitude < num_longitudinal_gravity_gradient_markers; longitude++)
+                for (unsigned int longitude = 0; longitude < num_longitudinal_effective_force_markers; longitude++)
                 {
-                    const auto& mesh = gravity_gradient_marker_meshes[latitude][longitude];
+                    const auto& mesh = effective_force_marker_meshes[latitude][longitude];
 
                     easy3d::vec3* const vertex_buffer = reinterpret_cast<easy3d::vec3*>(easy3d::VertexArrayObject::map_buffer(
                         GL_ARRAY_BUFFER, mesh.surface->vertex_buffer(), GL_WRITE_ONLY
@@ -900,15 +902,15 @@ protected:
     Model& model;
 
     const double siphon_width;
-    const unsigned int num_latitudinal_gravity_gradient_marker_rings;
-    const unsigned int num_longitudinal_gravity_gradient_markers;
+    const unsigned int num_latitudinal_effective_force_marker_rings;
+    const unsigned int num_longitudinal_effective_force_markers;
 
     DrawableMesh asteroid_mesh;
     DrawableMesh siphon_mesh;
     DrawableMesh collecting_satellite_mesh;
     DrawableMesh released_payload_mesh;
     std::vector<DrawableMesh> siphon_mass_meshes;
-    std::vector<std::vector<DrawableMesh>> gravity_gradient_marker_meshes;
+    std::vector<std::vector<DrawableMesh>> effective_force_marker_meshes;
 
     std::chrono::time_point<std::chrono::system_clock> start_animation_time;
     std::chrono::time_point<std::chrono::system_clock> last_animation_time;
