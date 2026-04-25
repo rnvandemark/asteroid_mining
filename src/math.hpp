@@ -190,4 +190,24 @@ namespace am {
         };
     }
 
+    std::array<double, 3> calculate_cartesian_effective_force(
+        const double beta,
+        const double gamma,
+        const double omega,
+        const double x,
+        const double y,
+        const double z,
+        const double lambda,
+        double& magnitude
+    )
+    {
+        const auto effective_forces = calculate_cartesian_effective_force(beta, gamma, omega, x, y, z, lambda);
+        magnitude = std::sqrt(
+            (effective_forces[0] * effective_forces[0])
+            + (effective_forces[1] * effective_forces[1])
+            + (effective_forces[2] * effective_forces[2])
+        );
+        return effective_forces;
+    }
+
 }

@@ -53,7 +53,8 @@ public:
             velocity.y += (acceleration.y * dt);
             velocity.z += (acceleration.z * dt);
 
-            const auto effective_force = asteroid.calculate_cartesian_effective_force_at(position);
+            double effective_force_magnitude = 0;
+            const auto effective_force = asteroid.calculate_cartesian_effective_force_at(position, effective_force_magnitude);
 
             acceleration.x = effective_force[0] + (2 * velocity.y);
             acceleration.y = effective_force[1] - (2 * velocity.x);
@@ -62,6 +63,11 @@ public:
             if (asteroid.is_point_within(position))
             {
                 std::cout << "Payload at [" << position << "] has crashed into asteroid" << std::endl;
+                active = false;
+            }
+            else if ((1.001 * effective_force_magnitude) >= position.length())
+            {
+                std::cout << "Payload simulation boundary reached" << std::endl;
                 active = false;
             }
         }

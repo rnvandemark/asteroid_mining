@@ -645,12 +645,7 @@ protected:
             const easy3d::vec2 net_siphon_direction(std::cos(net_siphon_chain_angle), std::sin(net_siphon_chain_angle));
             for (std::size_t i = 0; i < siphon_mass_meshes.size(); i++)
             {
-                effective_forces[i] = siphon.calculate_cartesian_effective_force_on_chain_at(siphon.get_mass_position(i));
-                effective_force_magnitudes[i] = std::sqrt(
-                    (effective_forces[i][0] * effective_forces[i][0])
-                    + (effective_forces[i][1] * effective_forces[i][1])
-                    + (effective_forces[i][2] * effective_forces[i][2])
-                );
+                effective_forces[i] = siphon.calculate_cartesian_effective_force_on_chain_at(siphon.get_mass_position(i), effective_force_magnitudes[i]);
                 effective_force_is_positives[i] = std::acos(
                     easy3d::dot(net_siphon_direction, easy3d::vec2(effective_forces[i][0], effective_forces[i][1])) / effective_force_magnitudes[i]
                 ) < (M_PI/2);
@@ -727,12 +722,8 @@ protected:
                     effective_force_marker_positions[latitude][longitude].y = effective_forces_radius * std::sin(theta) * std::sin(phi);
                     effective_force_marker_positions[latitude][longitude].z = effective_forces_radius * std::cos(theta);
                     effective_forces[latitude][longitude] = asteroid.calculate_cartesian_effective_force_at(
-                        q__asteroid__universe.rotate(effective_force_marker_positions[latitude][longitude])
-                    );
-                    effective_force_magnitudes[latitude][longitude] = std::sqrt(
-                        (effective_forces[latitude][longitude][0] * effective_forces[latitude][longitude][0])
-                        + (effective_forces[latitude][longitude][1] * effective_forces[latitude][longitude][1])
-                        + (effective_forces[latitude][longitude][2] * effective_forces[latitude][longitude][2])
+                        q__asteroid__universe.rotate(effective_force_marker_positions[latitude][longitude]),
+                        effective_force_magnitudes[latitude][longitude]
                     );
                 }
             }

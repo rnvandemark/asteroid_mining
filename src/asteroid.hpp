@@ -82,6 +82,12 @@ public:
 
     std::array<double, 3> calculate_cartesian_effective_force_at(const easy3d::vec3& position) const
     {
+        double dummy;
+        return calculate_cartesian_effective_force_at(position, dummy);
+    }
+
+    std::array<double, 3> calculate_cartesian_effective_force_at(const easy3d::vec3& position, double& magnitude) const
+    {
         const double lambda = ((position.length() < 1e-6) ? 0 : calculate_confocal_ellipsoid_surface(
             beta,
             gamma,
@@ -96,7 +102,8 @@ public:
             position.x,
             position.y,
             position.z,
-            lambda
+            lambda,
+            magnitude
         );
     }
 

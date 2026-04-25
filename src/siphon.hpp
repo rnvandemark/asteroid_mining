@@ -218,6 +218,28 @@ public:
         siphon_angular_acceleration = net_torque / net_moment;
     }
 
+    easy3d::vec3 get_position_in_asteroid_frame(const double chain_position) const
+    {
+        const double net_chain_angle = anchor_point_polar_angle + siphon_angular_position;
+        return easy3d::vec3(
+            (anchor_point_polar_radius * std::cos(anchor_point_polar_angle)) + (chain_position * std::cos(net_chain_angle)),
+            (anchor_point_polar_radius * std::sin(anchor_point_polar_angle)) + (chain_position * std::sin(net_chain_angle)),
+            0
+        );
+    }
+
+    std::array<double, 3> calculate_cartesian_effective_force_on_chain_at(const double chain_position) const
+    {
+        double dummy;
+        return calculate_cartesian_effective_force_on_chain_at(chain_position, dummy);
+    }
+
+    std::array<double, 3> calculate_cartesian_effective_force_on_chain_at(const double chain_position, double& magnitude) const
+    {
+        return asteroid.calculate_cartesian_effective_force_at(get_position_in_asteroid_frame(chain_position), magnitude);
+    }
+
+
     const Asteroid& asteroid;
 
     // The number of buckets on each side of the chain, so there are 2n total.
@@ -235,22 +257,6 @@ public:
     const double anchor_point_polar_radius;
 
     const double max_bottom_lifting_side_mass_position;
-
-    easy3d::vec3 get_position_in_asteroid_frame(const double chain_position) const
-    {
-        const double net_chain_angle = anchor_point_polar_angle + siphon_angular_position;
-        return easy3d::vec3(
-            (anchor_point_polar_radius * std::cos(anchor_point_polar_angle)) + (chain_position * std::cos(net_chain_angle)),
-            (anchor_point_polar_radius * std::sin(anchor_point_polar_angle)) + (chain_position * std::sin(net_chain_angle)),
-            0
-        );
-    }
-
-    std::array<double, 3> calculate_cartesian_effective_force_on_chain_at(const double chain_position) const
-    {
-        return asteroid.calculate_cartesian_effective_force_at(get_position_in_asteroid_frame(chain_position));
-    }
-
 protected:
     double siphon_angular_position;
     double siphon_angular_velocity;
