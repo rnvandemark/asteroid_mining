@@ -348,6 +348,33 @@ protected:
         );
 
         y += font_size * 1.5f * dpi_scaling();
+        texter_->draw("Siphon tether:", x, y, font_size, 1, font_color);
+
+        y += font_size * 1.5f * dpi_scaling();
+        texter_->draw(
+            "- angular position: " + std::to_string(round(model.get_siphon().get_siphon_angular_position() * 180 / M_PI, 3)) + " deg",
+            x, y, font_size, 1, font_color
+        );
+
+        y += font_size * 1.5f * dpi_scaling();
+        texter_->draw(
+            "- angular velocity: " + std::to_string(round(dimensions_scaler.get_dimensioned(
+                model.get_siphon().get_siphon_angular_velocity(),
+                DimensionsScaler::ScaleOpChain() / DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::TIME)
+            ) * 1e3 * 180 / M_PI, 3)) + " mdeg/s",
+            x, y, font_size, 1, font_color
+        );
+
+        y += font_size * 1.5f * dpi_scaling();
+        texter_->draw(
+            "- angular acceleration: " + std::to_string(round(dimensions_scaler.get_dimensioned(
+                model.get_siphon().get_siphon_angular_acceleration(),
+                DimensionsScaler::ScaleOpChain() / DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::TIME, 2)
+            ) * 1e6 * 180 / M_PI, 3)) + " μdeg/s^2",
+            x, y, font_size, 1, font_color
+        );
+
+        y += font_size * 1.5f * dpi_scaling();
         texter_->draw(
             "Last min / max siphon position: " + std::to_string(round(model.get_siphon().get_last_min_siphon_angular_position_reached() * 180 / M_PI, 3))
                 + " / " + std::to_string(round(model.get_siphon().get_last_max_siphon_angular_position_reached() * 180 / M_PI, 3)) + " deg"

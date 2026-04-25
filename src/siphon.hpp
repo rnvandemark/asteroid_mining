@@ -108,6 +108,11 @@ public:
         return siphon_angular_velocity;
     }
 
+    double get_siphon_angular_acceleration() const
+    {
+        return siphon_angular_acceleration;
+    }
+
     double get_cs_payload_mass() const
     {
         return cs_payload_mass;
@@ -150,7 +155,7 @@ public:
 
     virtual void progress_over(const double dt) override
     {
-        const double last_sipon_angular_position = siphon_angular_position;
+        const double last_siphon_angular_position = siphon_angular_position;
 
         total_time_elapsed += dt;
 
@@ -234,12 +239,12 @@ public:
 
         if (last_siphon_angular_velocity_was_positive && (siphon_angular_velocity < 0))
         {
-            last_max_siphon_angular_position_reached = last_sipon_angular_position;
+            last_max_siphon_angular_position_reached = last_siphon_angular_position;
             last_siphon_angular_velocity_was_positive = false;
         }
         else if ((!last_siphon_angular_velocity_was_positive) && (siphon_angular_velocity > 0))
         {
-            last_min_siphon_angular_position_reached = last_sipon_angular_position;
+            last_min_siphon_angular_position_reached = last_siphon_angular_position;
             last_siphon_angular_velocity_was_positive = true;
         }
     }
