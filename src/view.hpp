@@ -347,6 +347,14 @@ protected:
             x, y, font_size, 1, font_color
         );
 
+        y += font_size * 1.5f * dpi_scaling();
+        texter_->draw(
+            "Last min / max siphon position: " + std::to_string(round(model.get_siphon().get_last_min_siphon_angular_position_reached() * 180 / M_PI, 3))
+                + " / " + std::to_string(round(model.get_siphon().get_last_max_siphon_angular_position_reached() * 180 / M_PI, 3)) + " deg"
+            ,
+            x, y, font_size, 1, font_color
+        );
+
         if (model.get_released_payload().is_active())
         {
             const auto& released_payload_p__asteroid = model.get_released_payload().get_position();

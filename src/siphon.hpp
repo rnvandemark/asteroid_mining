@@ -44,6 +44,9 @@ public:
         total_time_elapsed(0.0),
         time_mass_reached_cs_last(0.0),
         time_elapsed_last_mass_to_reach_cs(0.0),
+        last_siphon_angular_velocity_was_positive(false),
+        last_min_siphon_angular_position_reached(0.0),
+        last_max_siphon_angular_position_reached(0.0),
         mass_positions(n),
         mass_effective_forces(n)
     {
@@ -115,6 +118,16 @@ public:
         return time_elapsed_last_mass_to_reach_cs;
     }
 
+    double get_last_min_siphon_angular_position_reached() const
+    {
+        return last_min_siphon_angular_position_reached;
+    }
+
+    double get_last_max_siphon_angular_position_reached() const
+    {
+        return last_max_siphon_angular_position_reached;
+    }
+
     bool get_mass_is_lifting(const unsigned int i) const
     {
         return i < n;
@@ -137,6 +150,8 @@ public:
 
     virtual void progress_over(const double dt) override
     {
+        const double last_sipon_angular_position = siphon_angular_position;
+
         total_time_elapsed += dt;
 
         // Update the first mass' position and chain's angular position
@@ -216,6 +231,17 @@ public:
 
         bottom_lifting_side_mass_acceleration = net_radial_force / (n * (1 + descending_side_mass));
         siphon_angular_acceleration = net_torque / net_moment;
+
+        if (last_siphon_angular_velocity_was_positive && (siphon_angular_velocity < 0))
+        {
+            last_max_siphon_angular_position_reached = last_sipon_angular_position;
+            last_siphon_angular_velocity_was_positive = false;
+        }
+        else if ((!last_siphon_angular_velocity_was_positive) && (siphon_angular_velocity > 0))
+        {
+            last_min_siphon_angular_position_reached = last_sipon_angular_position;
+            last_siphon_angular_velocity_was_positive = true;
+        }
     }
 
     easy3d::vec3 get_position_in_asteroid_frame(const double chain_position) const
@@ -271,6 +297,10 @@ protected:
     double total_time_elapsed;
     double time_mass_reached_cs_last;
     double time_elapsed_last_mass_to_reach_cs;
+
+    bool last_siphon_angular_velocity_was_positive;
+    double last_min_siphon_angular_position_reached;
+    double last_max_siphon_angular_position_reached;
 
     std::vector<double> mass_positions;
     std::vector<std::array<double, 3>> mass_effective_forces;
