@@ -26,6 +26,10 @@ public:
     {
         return position;
     }
+    const easy3d::vec3& get_velocity() const
+    {
+        return velocity;
+    }
 
     void release(
         const double mass_,

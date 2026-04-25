@@ -10,6 +10,12 @@ namespace am {
 
     const double G = 6.67e-11;
 
+    double round(const double v, const unsigned int n)
+    {
+        const double f = std::pow(10, n);
+        return std::round(v * f) / f;
+    }
+
     // DISCLAIMER: this is copy and paste from Boost
     // (https://github.com/boostorg/math/blob/develop/include/boost/math/tools/cubic_roots.hpp)
     // because it was introduced in a newer version that I don't have access to :(

@@ -266,6 +266,33 @@ protected:
     {
         easy3d::Viewer::post_draw();
 
+        const float font_size = 15.0f;
+        float x = 20.0f * dpi_scaling();
+        float y = 0.0f;
+
+        // DISCLAIMER: partially copy and pasted from easy3d::Viewer so I can
+        // rewrite stuff and account for the background color
+        const easy3d::vec3 font_color(1-background_color().x, 1-background_color().y, 1-background_color().z);
+
+        if (show_easy3d_logo_)
+        {
+            y += font_size * 1.5f * dpi_scaling();
+            texter_->draw("Easy3D", x, y, font_size, 0, font_color);
+        }
+
+        if (show_frame_rate_)
+        {
+            y += font_size * 1.5f * dpi_scaling();
+            texter_->draw(framerate_, x, y, font_size, 1, font_color);
+        }
+
+        if (!hint_.empty())
+        {
+            x += font_size * dpi_scaling();
+            y += font_size * 1.5f * dpi_scaling();
+            texter_->draw(hint_, x, y, font_size, easy3d::TextRenderer::ALIGN_LEFT, 1, font_color);
+        }
+
         std::string desc = "Passage of time: ";
         switch (time_per_second)
         {
@@ -299,53 +326,87 @@ protected:
         }
         desc += " / sec";
 
-        const float font_size = 15.0f;
-        float x = 20.0f * dpi_scaling();
-        float y = 0.0f;
-
-        // DISCLAIMER: partially copy and pasted from easy3d::Viewer so I can
-        // rewrite stuff and account for the background color
-        const easy3d::vec3 font_color(1-background_color().x, 1-background_color().y, 1-background_color().z);
-
-        if (show_easy3d_logo_)
-        {
-            y += font_size * 1.5f * dpi_scaling();
-            texter_->draw("Easy3D", x, y, font_size, 0, font_color);
-        }
-
-        if (show_frame_rate_)
-        {
-            y += font_size * 1.5f * dpi_scaling();
-            texter_->draw(framerate_, x, y, font_size, 1, font_color);
-        }
-
-        if (!hint_.empty())
-        {
-            x += font_size * dpi_scaling();
-            y += font_size * 1.5f * dpi_scaling();
-            texter_->draw(hint_, x, y, font_size, easy3d::TextRenderer::ALIGN_LEFT, 1, font_color);
-        }
-
         y += font_size * 1.5f * dpi_scaling();
         texter_->draw(desc, x, y, font_size, 1, font_color);
 
         y += font_size * 1.5f * dpi_scaling();
         texter_->draw(
-            "Harvested material: " + std::to_string(static_cast<int>(std::round(dimensions_scaler.get_dimensioned(
+            "Harvested material: " + std::to_string(round(dimensions_scaler.get_dimensioned(
                 model.get_siphon().get_cs_payload_mass(),
                 DimensionsScaler::ScaleOpChain() * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::MASS)
-            )))) + " kg",
+            ), 3)) + " kg",
             x, y, font_size, 1, font_color
         );
 
         y += font_size * 1.5f * dpi_scaling();
         texter_->draw(
-            "Time elapsed between each mass: " + std::to_string(dimensions_scaler.get_dimensioned(
+            "Time elapsed between each mass: " + std::to_string(round(dimensions_scaler.get_dimensioned(
                 model.get_siphon().get_time_elapsed_last_mass_to_reach_cs() / 60,
                 DimensionsScaler::ScaleOpChain() * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::TIME)
-            )) + " min",
+            ), 3)) + " min",
             x, y, font_size, 1, font_color
         );
+
+        if (model.get_released_payload().is_active())
+        {
+            const auto& released_payload_p__asteroid = model.get_released_payload().get_position();
+            const auto& released_payload_v__asteroid = model.get_released_payload().get_velocity();
+
+            const easy3d::Vec<3, float> axis_of_rotation(0, 0, 1);
+            const auto released_payload_p__universe = easy3d::Quat<float>(
+                axis_of_rotation, model.get_asteroid().get_rotation()
+            ).rotate(released_payload_p__asteroid);
+            const auto released_payload_v__universe = released_payload_v__asteroid + easy3d::cross(
+                axis_of_rotation, released_payload_p__asteroid
+            );
+
+            const auto stringify_p = [this] (const easy3d::vec3& p__frame) -> std::string
+            {
+                const auto chain = DimensionsScaler::ScaleOpChain()
+                    * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::DISTANCE)
+                ;
+                return "-- position: [" + std::to_string(round(dimensions_scaler.get_dimensioned(p__frame.x, chain) / 1000, 3))
+                    + ", " + std::to_string(round(dimensions_scaler.get_dimensioned(p__frame.y, chain) / 1000, 3))
+                    + ", " + std::to_string(round(dimensions_scaler.get_dimensioned(p__frame.z, chain) / 1000, 3)) + "] km"
+                ;
+            };
+
+            const auto stringify_v = [this] (const easy3d::vec3& v__frame) -> std::string
+            {
+                const double norm = v__frame.norm();
+                return "-- velocity: " + std::to_string(round(dimensions_scaler.get_dimensioned(
+                        norm,
+                        DimensionsScaler::ScaleOpChain()
+                            * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::DISTANCE)
+                            / DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::TIME)
+                    ), 3))
+                    + " m/s [" + std::to_string(round(v__frame.x / norm, 3))
+                    + ", " + std::to_string(round(v__frame.y / norm, 3))
+                    + ", " + std::to_string(round(v__frame.z / norm, 3)) + "]"
+                ;
+            };
+
+            y += font_size * 1.5f * dpi_scaling();
+            texter_->draw("Released payload:", x, y, font_size, 1, font_color);
+
+            y += font_size * 1.5f * dpi_scaling();
+            texter_->draw("- asteroid frame:", x, y, font_size, 1, font_color);
+
+            y += font_size * 1.5f * dpi_scaling();
+            texter_->draw(stringify_p(released_payload_p__asteroid), x, y, font_size, 1, font_color);
+
+            y += font_size * 1.5f * dpi_scaling();
+            texter_->draw(stringify_v(released_payload_v__asteroid), x, y, font_size, 1, font_color);
+
+            y += font_size * 1.5f * dpi_scaling();
+            texter_->draw("- universe frame:", x, y, font_size, 1, font_color);
+
+            y += font_size * 1.5f * dpi_scaling();
+            texter_->draw(stringify_p(released_payload_p__universe), x, y, font_size, 1, font_color);
+
+            y += font_size * 1.5f * dpi_scaling();
+            texter_->draw(stringify_v(released_payload_v__universe), x, y, font_size, 1, font_color);
+        }
     }
 
     const DimensionsScaler& dimensions_scaler;
