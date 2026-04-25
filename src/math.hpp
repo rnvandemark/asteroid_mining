@@ -179,13 +179,13 @@ namespace am {
         const double lambda
     )
     {
-        const double c = 3 / (2 * omega * omega);
+        const double c = 1 / (omega * omega);
         const double rd0 = 1 + lambda;
         const double rd1 = (beta * beta) + lambda;
         const double rd2 = (gamma * gamma) + lambda;
         return std::array<double, 3>{
             x * (1 - (c * boost::math::ellint_rd(rd1, rd2, rd0))),
-            y * (1 - (c * boost::math::ellint_rd(rd0, rd2, rd1))),
+            y * (1 - (c * boost::math::ellint_rd(rd2, rd0, rd1))),
             z * (1 - (c * boost::math::ellint_rd(rd0, rd1, rd2)))
         };
     }
