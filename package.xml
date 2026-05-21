@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package format="3">
+    <name>asteroid_mining</name>
+    <version>0.0.0</version>
+    <description>Asteroid mining simulation libraries.</description>
+    <license>Apache License 2.0</license>
+
+    <maintainer email="rnvandemark@gmail.com">R. Nick Vandemark</maintainer>
+    <author email="rnvandemark@gmail.com">R. Nick Vandemark</author>
+
+    <buildtool_depend>cmake</buildtool_depend>
+
+    <depend>Boost</depend>
+    <depend>Easy3D</depend>
+
+    <export>
+        <build_type>cmake</build_type>
+    </export>
+</package>

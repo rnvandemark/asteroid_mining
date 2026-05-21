@@ -1,8 +1,8 @@
-#include "asteroid.hpp"
-#include "dimensions_scaler.hpp"
-#include "model.hpp"
-#include "siphon.hpp"
-#include "view.hpp"
+#include "asteroid_mining/asteroid.hpp"
+#include "asteroid_mining/dimensions_scaler.hpp"
+#include "asteroid_mining/model.hpp"
+#include "asteroid_mining/siphon.hpp"
+#include "asteroid_mining/view.hpp"
 
 #include <easy3d/util/initializer.h>
 
@@ -29,16 +29,16 @@ int main(int argc, char** argv)
     const unsigned int num_latitudinal_effective_force_marker_rings = 10;
     const unsigned int num_longitudinal_effective_force_markers = 20;
 
-    am::DimensionsScaler dimensions_scaler(alpha_bar, bucket_mass + payload_mass, 1 / omega_bar);
+    asteroid_mining::DimensionsScaler dimensions_scaler(alpha_bar, bucket_mass + payload_mass, 1 / omega_bar);
 
-    am::Asteroid asteroid = am::Asteroid::from_dimensioned_values(
+    asteroid_mining::Asteroid asteroid = asteroid_mining::Asteroid::from_dimensioned_values(
         dimensions_scaler,
         beta_bar,
         gamma_bar,
         rho_bar,
         omega_bar
     );
-    am::Siphon siphon = am::Siphon::from_dimensioned_values(
+    asteroid_mining::Siphon siphon = asteroid_mining::Siphon::from_dimensioned_values(
         dimensions_scaler,
         asteroid,
         num_payloads_per_side,
@@ -52,10 +52,10 @@ int main(int argc, char** argv)
         initial_bottom_lifting_side_mass_position,
         initial_bottom_lifting_side_mass_velocity
     );
-    am::Model model(asteroid, siphon);
+    asteroid_mining::Model model(asteroid, siphon);
 
     easy3d::initialize();
-    return am::View(
+    return asteroid_mining::View(
         dimensions_scaler,
         model,
         siphon_width,

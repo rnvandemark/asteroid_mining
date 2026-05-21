@@ -1,6 +1,6 @@
 #pragma once
 
-namespace am {
+namespace asteroid_mining {
 
 class ProgressableI
 {
