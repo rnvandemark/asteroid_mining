@@ -3,6 +3,7 @@
 #include "asteroid_mining/math.hpp"
 
 #include <cmath>
+#include <iostream>
 
 namespace asteroid_mining {
 
@@ -139,7 +140,7 @@ double Siphon::get_mass_position(const unsigned int i) const
     return mass_positions[i];
 }
 
-const std::array<double, 3>& Siphon::get_mass_effective_force(const unsigned int i) const
+const Eigen::Vector3d& Siphon::get_mass_effective_force(const unsigned int i) const
 {
     return mass_effective_forces[i];
 }
@@ -192,18 +193,19 @@ void Siphon::progress_over(const double dt)
 
     double net_radial_force = 0;
     double net_torque = cs_total_mass * chain_length * (
-        (cs_effective_force[0] * -std::sin(net_chain_angle)) + (cs_effective_force[1] * std::cos(net_chain_angle))
+        (cs_effective_force.x() * -std::sin(net_chain_angle)) + (cs_effective_force.y() * std::cos(net_chain_angle))
     );
     double net_moment = cs_total_mass * chain_length * chain_length;
     for (std::size_t m = 0; m < n; m++)
     {
+        const auto& mass_effective_force = mass_effective_forces[m];
         const double mass_radial_force = lifting_side_mass * (
-            ((mass_effective_forces[m][0] * std::cos(net_chain_angle)) + (mass_effective_forces[m][1] * std::sin(net_chain_angle)))
+            ((mass_effective_force.x() * std::cos(net_chain_angle)) + (mass_effective_force.y() * std::sin(net_chain_angle)))
             + (mass_positions[m] * siphon_angular_velocity * siphon_angular_velocity)
             + (2 * siphon_angular_velocity * mass_positions[m])
         );
         const double mass_torque = mass_positions[m] * (
-            ((mass_effective_forces[m][0] * -std::sin(net_chain_angle)) + (mass_effective_forces[m][1] * std::cos(net_chain_angle)))
+            ((mass_effective_force.x() * -std::sin(net_chain_angle)) + (mass_effective_force.y() * std::cos(net_chain_angle)))
             - (2 * (1 + siphon_angular_velocity) * bottom_lifting_side_mass_velocity)
         );
         const double mass_moment = lifting_side_mass * mass_positions[m] * mass_positions[m];
@@ -214,13 +216,14 @@ void Siphon::progress_over(const double dt)
     }
     for (std::size_t m = n; m < 2 * n; m++)
     {
+        const auto& mass_effective_force = mass_effective_forces[m];
         const double mass_radial_force = -descending_side_mass * (
-            ((mass_effective_forces[m][0] * std::cos(net_chain_angle)) + (mass_effective_forces[m][1] * std::sin(net_chain_angle)))
+            ((mass_effective_force.x() * std::cos(net_chain_angle)) + (mass_effective_force.y() * std::sin(net_chain_angle)))
             + (mass_positions[m] * siphon_angular_velocity * siphon_angular_velocity)
             + (2 * siphon_angular_velocity * mass_positions[m])
         );
         const double mass_torque = mass_positions[m] * descending_side_mass * (
-            ((mass_effective_forces[m][1] * -std::sin(net_chain_angle)) + (mass_effective_forces[m][1] * std::cos(net_chain_angle)))
+            ((mass_effective_force.x() * -std::sin(net_chain_angle)) + (mass_effective_force.y() * std::cos(net_chain_angle)))
             + (2 * (1 + siphon_angular_velocity) * bottom_lifting_side_mass_velocity)
         );
         const double mass_moment = descending_side_mass * mass_positions[m] * mass_positions[m];
@@ -245,23 +248,23 @@ void Siphon::progress_over(const double dt)
     }
 }
 
-easy3d::vec3 Siphon::get_position_in_asteroid_frame(const double chain_position) const
+Eigen::Vector3d Siphon::get_position_in_asteroid_frame(const double chain_position) const
 {
     const double net_chain_angle = anchor_point_polar_angle + siphon_angular_position;
-    return easy3d::vec3(
+    return Eigen::Vector3d{
         (anchor_point_polar_radius * std::cos(anchor_point_polar_angle)) + (chain_position * std::cos(net_chain_angle)),
         (anchor_point_polar_radius * std::sin(anchor_point_polar_angle)) + (chain_position * std::sin(net_chain_angle)),
         0
-    );
+    };
 }
 
-std::array<double, 3> Siphon::calculate_cartesian_effective_force_on_chain_at(const double chain_position) const
+Eigen::Vector3d Siphon::calculate_cartesian_effective_force_on_chain_at(const double chain_position) const
 {
     double dummy;
     return calculate_cartesian_effective_force_on_chain_at(chain_position, dummy);
 }
 
-std::array<double, 3> Siphon::calculate_cartesian_effective_force_on_chain_at(const double chain_position, double& magnitude) const
+Eigen::Vector3d Siphon::calculate_cartesian_effective_force_on_chain_at(const double chain_position, double& magnitude) const
 {
     return asteroid.calculate_cartesian_effective_force_at(get_position_in_asteroid_frame(chain_position), magnitude);
 }

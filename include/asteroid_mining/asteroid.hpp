@@ -3,7 +3,7 @@
 #include "asteroid_mining/dimensions_scaler.hpp"
 #include "asteroid_mining/progressable_i.hpp"
 
-#include <easy3d/core/types.h>
+#include <Eigen/Dense>
 
 namespace asteroid_mining {
 
@@ -40,10 +40,10 @@ public:
 
     virtual void progress_over(const double dt) override;
 
-    bool is_point_within(const easy3d::vec3& p) const;
+    bool is_point_within(const Eigen::Vector3d& p) const;
 
-    std::array<double, 3> calculate_cartesian_effective_force_at(const easy3d::vec3& position) const;
-    std::array<double, 3> calculate_cartesian_effective_force_at(const easy3d::vec3& position, double& magnitude) const;
+    Eigen::Vector3d calculate_cartesian_effective_force_at(const Eigen::Vector3d& position) const;
+    Eigen::Vector3d calculate_cartesian_effective_force_at(const Eigen::Vector3d& position, double& magnitude) const;
 
     // The longest dimension of the ellipsoid (distance).
     const double alpha;

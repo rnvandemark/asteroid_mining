@@ -12,6 +12,7 @@
 
     <depend>Boost</depend>
     <depend>Easy3D</depend>
+    <depend>Eigen3</depend>
 
     <export>
         <build_type>cmake</build_type>

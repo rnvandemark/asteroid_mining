@@ -10,18 +10,18 @@ double round(const double v, const unsigned int n)
     return std::round(v * f) / f;
 }
 
-easy3d::Mat3<float> rotation_to_align(const easy3d::vec3& v0, const easy3d::vec3& v1)
+Eigen::Matrix3d rotation_to_align(const Eigen::Vector3d& v0, const Eigen::Vector3d& v1)
 {
-    const easy3d::vec3 v0n = easy3d::normalize(v0);
-    const easy3d::vec3 v1n = easy3d::normalize(v1);
+    const Eigen::Vector3d v0n = v0.normalized();
+    const Eigen::Vector3d v1n = v1.normalized();
 
-    const easy3d::vec3 v = easy3d::cross(v0n, v1n);
-    const easy3d::Mat3<float> vx(
-         0,    -v[2], +v[1],
-        +v[2],  0,    -v[0],
-        -v[1], +v[0],  0
-    );
-    return easy3d::Mat3<float>::identity() + vx + ((vx * vx) / (1 + easy3d::dot(v0n, v1n)));
+    const Eigen::Vector3d v = v0n.cross(v1n);
+    const Eigen::Matrix3d vx{
+        { 0,    -v[2], +v[1]},
+        {+v[2],  0,    -v[0]},
+        {-v[1], +v[0],  0   },
+    };
+    return Eigen::Matrix3d::Identity() + vx + ((vx * vx) / (1 + v0n.dot(v1n)));
 }
 
 double calculate_confocal_ellipsoid_surface(
@@ -57,7 +57,7 @@ double calculate_confocal_ellipsoid_surface(
     return lambda;
 }
 
-std::array<double, 3> calculate_cartesian_effective_force(
+Eigen::Vector3d calculate_cartesian_effective_force(
     const double beta,
     const double gamma,
     const double omega,
@@ -71,14 +71,14 @@ std::array<double, 3> calculate_cartesian_effective_force(
     const double rd0 = 1 + lambda;
     const double rd1 = (beta * beta) + lambda;
     const double rd2 = (gamma * gamma) + lambda;
-    return std::array<double, 3>{
+    return Eigen::Vector3d{
         x * (1 - (c * boost::math::ellint_rd(rd1, rd2, rd0))),
         y * (1 - (c * boost::math::ellint_rd(rd2, rd0, rd1))),
         z * (1 - (c * boost::math::ellint_rd(rd0, rd1, rd2)))
     };
 }
 
-std::array<double, 3> calculate_cartesian_effective_force(
+Eigen::Vector3d calculate_cartesian_effective_force(
     const double beta,
     const double gamma,
     const double omega,
@@ -90,11 +90,7 @@ std::array<double, 3> calculate_cartesian_effective_force(
 )
 {
     const auto effective_forces = calculate_cartesian_effective_force(beta, gamma, omega, x, y, z, lambda);
-    magnitude = std::sqrt(
-        (effective_forces[0] * effective_forces[0])
-        + (effective_forces[1] * effective_forces[1])
-        + (effective_forces[2] * effective_forces[2])
-    );
+    magnitude = effective_forces.norm();
     return effective_forces;
 }
 

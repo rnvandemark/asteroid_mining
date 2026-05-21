@@ -5,14 +5,15 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
-find_package(Easy3D REQUIRED COMPONENTS algo core renderer util viewer)
 find_package(Boost REQUIRED)
+find_package(Easy3D REQUIRED COMPONENTS algo core renderer util viewer)
+find_package(Eigen3 REQUIRED)
 
 include_directories(include ${Easy3D_INCLUDE_DIR})
 
 add_library(${PROJECT_NAME}_math SHARED src/math.cpp)
 target_link_libraries(${PROJECT_NAME}_math
-    easy3d::core
+    Eigen3::Eigen
     Boost::boost
 )
 

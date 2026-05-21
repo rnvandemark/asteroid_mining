@@ -2,6 +2,8 @@
 
 #include "asteroid_mining/math.hpp"
 
+#include <iostream>
+
 namespace asteroid_mining {
 
 Asteroid::Asteroid(
@@ -57,36 +59,36 @@ void Asteroid::progress_over(const double dt)
     rotation += (dt * angular_velocity);
 }
 
-bool Asteroid::is_point_within(const easy3d::vec3& p) const
+bool Asteroid::is_point_within(const Eigen::Vector3d& p) const
 {
-    const double x = p.x / alpha;
-    const double y = p.y / beta;
-    const double z = p.z / gamma;
+    const double x = p.x() / alpha;
+    const double y = p.y() / beta;
+    const double z = p.z() / gamma;
     return (x*x) + (y*y) + (z*z) + 1e-6 <= 1.0;
 }
 
-std::array<double, 3> Asteroid::calculate_cartesian_effective_force_at(const easy3d::vec3& position) const
+Eigen::Vector3d Asteroid::calculate_cartesian_effective_force_at(const Eigen::Vector3d& position) const
 {
     double dummy;
     return calculate_cartesian_effective_force_at(position, dummy);
 }
 
-std::array<double, 3> Asteroid::calculate_cartesian_effective_force_at(const easy3d::vec3& position, double& magnitude) const
+Eigen::Vector3d Asteroid::calculate_cartesian_effective_force_at(const Eigen::Vector3d& position, double& magnitude) const
 {
-    const double lambda = ((position.length() < 1e-6) ? 0 : math::calculate_confocal_ellipsoid_surface(
+    const double lambda = ((position.squaredNorm() < 1e-6) ? 0 : math::calculate_confocal_ellipsoid_surface(
         beta,
         gamma,
-        position.x,
-        position.y,
-        position.z
+        position.x(),
+        position.y(),
+        position.z()
     ));
     return math::calculate_cartesian_effective_force(
         beta,
         gamma,
         omega,
-        position.x,
-        position.y,
-        position.z,
+        position.x(),
+        position.y(),
+        position.z(),
         lambda,
         magnitude
     );

@@ -2,7 +2,7 @@
 
 #include <boost/math/special_functions/sign.hpp>
 #include <boost/math/tools/roots.hpp>
-#include <easy3d/core/types.h>
+#include <Eigen/Dense>
 
 #include <array>
 
@@ -125,7 +125,7 @@ std::array<Real, 3> cubic_roots(Real a, Real b, Real c, Real d)
 
 double round(const double v, const unsigned int n);
 
-easy3d::Mat3<float> rotation_to_align(const easy3d::vec3& v0, const easy3d::vec3& v1);
+Eigen::Matrix3d rotation_to_align(const Eigen::Vector3d& v0, const Eigen::Vector3d& v1);
 
 double calculate_confocal_ellipsoid_surface(
     const double beta,
@@ -135,7 +135,7 @@ double calculate_confocal_ellipsoid_surface(
     const double z
 );
 
-std::array<double, 3> calculate_cartesian_effective_force(
+Eigen::Vector3d calculate_cartesian_effective_force(
     const double beta,
     const double gamma,
     const double omega,
@@ -145,7 +145,7 @@ std::array<double, 3> calculate_cartesian_effective_force(
     const double lambda
 );
 
-std::array<double, 3> calculate_cartesian_effective_force(
+Eigen::Vector3d calculate_cartesian_effective_force(
     const double beta,
     const double gamma,
     const double omega,

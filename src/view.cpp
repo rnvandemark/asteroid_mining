@@ -13,6 +13,21 @@
 #include <numeric>
 
 namespace {
+    Eigen::Vector3d from_easy3d(const easy3d::vec3& in)
+    {
+        return Eigen::Vector3d{
+            static_cast<float>(in.x),
+            static_cast<float>(in.y),
+            static_cast<float>(in.z),
+        };
+    }
+    void to_easy3d(const Eigen::Vector3d& in, easy3d::vec3& out)
+    {
+        out.x = static_cast<float>(in.x());
+        out.y = static_cast<float>(in.y());
+        out.z = static_cast<float>(in.z());
+    }
+
     easy3d::SurfaceMesh create_cube_mesh(const easy3d::vec3& geometric_center = easy3d::vec3(0, 0, 0))
     {
         easy3d::SurfaceMesh m;
@@ -89,6 +104,8 @@ namespace {
         return arrow;
     }
 }
+
+#define V_TO_EASY3D(IN, OUT) easy3d::vec3 OUT; to_easy3d(IN, OUT)
 
 namespace asteroid_mining {
 
@@ -362,8 +379,8 @@ void AsteroidMiningViewer::post_draw()
 
     if (model.get_released_payload().is_active())
     {
-        const auto& released_payload_p__asteroid = model.get_released_payload().get_position();
-        const auto& released_payload_v__asteroid = model.get_released_payload().get_velocity();
+        V_TO_EASY3D(model.get_released_payload().get_position(), released_payload_p__asteroid);
+        V_TO_EASY3D(model.get_released_payload().get_velocity(), released_payload_v__asteroid);
 
         const easy3d::Vec<3, float> axis_of_rotation(0, 0, 1);
         const auto released_payload_p__universe = easy3d::Quat<float>(
@@ -685,7 +702,7 @@ bool View::render_model()
     }
 
     {
-        std::vector<std::array<double, 3>> effective_forces(siphon_mass_meshes.size());
+        std::vector<easy3d::vec3> effective_forces(siphon_mass_meshes.size());
         std::vector<double> effective_force_magnitudes(siphon_mass_meshes.size());
         std::vector<bool> effective_force_is_positives(effective_force_marker_meshes.size());
 
@@ -693,7 +710,7 @@ bool View::render_model()
         const easy3d::vec2 net_siphon_direction(std::cos(net_siphon_chain_angle), std::sin(net_siphon_chain_angle));
         for (std::size_t i = 0; i < siphon_mass_meshes.size(); i++)
         {
-            effective_forces[i] = siphon.calculate_cartesian_effective_force_on_chain_at(siphon.get_mass_position(i), effective_force_magnitudes[i]);
+            to_easy3d(siphon.calculate_cartesian_effective_force_on_chain_at(siphon.get_mass_position(i), effective_force_magnitudes[i]), effective_forces[i]);
             effective_force_is_positives[i] = std::acos(
                 easy3d::dot(net_siphon_direction, easy3d::vec2(effective_forces[i][0], effective_forces[i][1])) / effective_force_magnitudes[i]
             ) < (M_PI/2);
@@ -749,9 +766,9 @@ bool View::render_model()
             num_latitudinal_effective_force_marker_rings,
             std::vector<easy3d::vec3>(num_longitudinal_effective_force_markers)
         );
-        std::vector<std::vector<std::array<double, 3>>> effective_forces(
+        std::vector<std::vector<easy3d::vec3>> effective_forces(
             num_latitudinal_effective_force_marker_rings,
-            std::vector<std::array<double, 3>>(num_longitudinal_effective_force_markers)
+            std::vector<easy3d::vec3>(num_longitudinal_effective_force_markers)
         );
         std::vector<std::vector<double>> effective_force_magnitudes(
             num_latitudinal_effective_force_marker_rings,
@@ -769,9 +786,12 @@ bool View::render_model()
                 effective_force_marker_positions[latitude][longitude].x = effective_forces_radius * std::sin(theta) * std::cos(phi);
                 effective_force_marker_positions[latitude][longitude].y = effective_forces_radius * std::sin(theta) * std::sin(phi);
                 effective_force_marker_positions[latitude][longitude].z = effective_forces_radius * std::cos(theta);
-                effective_forces[latitude][longitude] = asteroid.calculate_cartesian_effective_force_at(
-                    q__asteroid__universe.rotate(effective_force_marker_positions[latitude][longitude]),
-                    effective_force_magnitudes[latitude][longitude]
+                to_easy3d(
+                    asteroid.calculate_cartesian_effective_force_at(
+                        from_easy3d(q__asteroid__universe.rotate(effective_force_marker_positions[latitude][longitude])),
+                        effective_force_magnitudes[latitude][longitude]
+                    ),
+                    effective_forces[latitude][longitude]
                 );
             }
         }
@@ -794,15 +814,17 @@ bool View::render_model()
             for (unsigned int longitude = 0; longitude < num_longitudinal_effective_force_markers; longitude++)
             {
                 const auto& mesh = effective_force_marker_meshes[latitude][longitude];
+                const auto R__marker__CoG = math::rotation_to_align(
+                    Eigen::Vector3d::UnitZ(),
+                    from_easy3d(q__universe__asteroid.rotate(effective_forces[latitude][longitude]))
+                );
                 const auto T__marker__CoG = easy3d::Mat4<float>::translation(effective_force_marker_positions[latitude][longitude])
-                    * easy3d::Mat4<float>(math::rotation_to_align(
-                        easy3d::vec3(0, 0, 1),
-                        q__universe__asteroid.rotate(easy3d::vec3(
-                            effective_forces[latitude][longitude][0],
-                            effective_forces[latitude][longitude][1],
-                            effective_forces[latitude][longitude][2]
-                        ))
-                    ))
+                    * easy3d::Mat4<float>(
+                        R__marker__CoG(0,0), R__marker__CoG(0,1), R__marker__CoG(0,2), 0,
+                        R__marker__CoG(1,0), R__marker__CoG(1,1), R__marker__CoG(1,2), 0,
+                        R__marker__CoG(2,0), R__marker__CoG(2,1), R__marker__CoG(2,2), 0,
+                        0,                   0,                   0,                   1
+                    )
                 ;
                 const double relative_mag = (effective_force_magnitudes[latitude][longitude] - min_mag) / (max_mag - min_mag);
 
@@ -877,7 +899,7 @@ bool View::render_model()
         }
 
         // Transform the released payload's mesh
-        const auto& released_payload_p__asteroid = released_payload.get_position();
+        V_TO_EASY3D(released_payload.get_position(), released_payload_p__asteroid);
         const easy3d::Mat4<float> T__universe__released_payload = easy3d::Mat4<float>::rotation(q__universe__asteroid)
             * easy3d::Mat4<float>::translation(released_payload_p__asteroid)
         ;
@@ -934,5 +956,7 @@ bool View::render_model()
 
     return true;
 }
+
+#undef V_TO_EASY3D
 
 }

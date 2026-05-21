@@ -46,8 +46,8 @@ void Model::release_new_payload()
     released_payload.release(
         siphon.get_cs_payload_mass(),
         siphon.get_position_in_asteroid_frame(siphon.chain_length),
-        easy3d::vec3(-v_theta * std::sin(theta), v_theta * std::cos(theta), 0),
-        easy3d::vec3(0, 0, 0)
+        Eigen::Vector3d{-v_theta * std::sin(theta), v_theta * std::cos(theta), 0},
+        Eigen::Vector3d{0, 0, 0}
     );
     siphon.clear_cs_payload_mass();
     new_release_requested = false;

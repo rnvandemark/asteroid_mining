@@ -2,6 +2,8 @@
 
 #include "asteroid_mining/asteroid.hpp"
 
+#include <Eigen/Dense>
+
 namespace asteroid_mining {
 
 class Siphon : public ProgressableI
@@ -51,16 +53,16 @@ public:
 
     double get_mass_position(const unsigned int i) const;
 
-    const std::array<double, 3>& get_mass_effective_force(const unsigned int i) const;
+    const Eigen::Vector3d& get_mass_effective_force(const unsigned int i) const;
 
     void clear_cs_payload_mass();
 
     virtual void progress_over(const double dt) override;
 
-    easy3d::vec3 get_position_in_asteroid_frame(const double chain_position) const;
+    Eigen::Vector3d get_position_in_asteroid_frame(const double chain_position) const;
 
-    std::array<double, 3> calculate_cartesian_effective_force_on_chain_at(const double chain_position) const;
-    std::array<double, 3> calculate_cartesian_effective_force_on_chain_at(const double chain_position, double& magnitude) const;
+    Eigen::Vector3d calculate_cartesian_effective_force_on_chain_at(const double chain_position) const;
+    Eigen::Vector3d calculate_cartesian_effective_force_on_chain_at(const double chain_position, double& magnitude) const;
 
     const Asteroid& asteroid;
 
@@ -100,7 +102,7 @@ protected:
     double last_max_siphon_angular_position_reached;
 
     std::vector<double> mass_positions;
-    std::vector<std::array<double, 3>> mass_effective_forces;
+    std::vector<Eigen::Vector3d> mass_effective_forces;
 };
 
 }

@@ -2,6 +2,8 @@
 
 #include "asteroid_mining/asteroid.hpp"
 
+#include <Eigen/Dense>
+
 namespace asteroid_mining {
 
 class ReleasedPayload : public ProgressableI
@@ -11,14 +13,14 @@ public:
 
     bool is_active() const;
 
-    const easy3d::vec3& get_position() const;
-    const easy3d::vec3& get_velocity() const;
+    const Eigen::Vector3d& get_position() const;
+    const Eigen::Vector3d& get_velocity() const;
 
     void release(
         const double mass_,
-        const easy3d::vec3& position_,
-        const easy3d::vec3& velocity_,
-        const easy3d::vec3& acceleration_
+        const Eigen::Vector3d& position_,
+        const Eigen::Vector3d& velocity_,
+        const Eigen::Vector3d& acceleration_
     );
 
     virtual void progress_over(const double dt) override;
@@ -29,9 +31,9 @@ protected:
     bool active;
 
     double mass;
-    easy3d::vec3 position;
-    easy3d::vec3 velocity;
-    easy3d::vec3 acceleration;
+    Eigen::Vector3d position;
+    Eigen::Vector3d velocity;
+    Eigen::Vector3d acceleration;
 };
 
 }
