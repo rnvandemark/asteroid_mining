@@ -1,10 +1,5 @@
 #pragma once
 
-#include "asteroid_mining/dimensions_scaler.hpp"
-#include "asteroid_mining/progressable_i.hpp"
-
-#include <Eigen/Dense>
-
 namespace asteroid_mining {
 
 /* Triaxial ellipsoid with semi-major axes a_bar >= beta_bar >= gamma_bar,
@@ -17,51 +12,50 @@ namespace asteroid_mining {
  * alpha_bar (hence why this class does not take an alpha value as a parameter,
  * because alpha_bar scaled by itself is always 1).
  */
-class Asteroid : public ProgressableI
+class AsteroidCarrier
 {
+    friend class AsteroidMemento;
+
 public:
-    Asteroid(
+    AsteroidCarrier();
+
+    AsteroidCarrier(
+        const double alpha_,
         const double beta_,
         const double gamma_,
         const double density_,
-        const double rho_A,
-        const double omega_bar
+        const double angular_velocity_,
+        const double omega_,
+        const double rotation_
     );
 
-    static Asteroid from_dimensioned_values(
-        const DimensionsScaler& dimensions_scaler,
-        const double beta_bar,
-        const double gamma_bar,
-        const double rho_A,
-        const double omega_bar
-    );
+    double get_alpha() const;
+    double get_beta() const;
+    double get_gamma() const;
+
+    double get_density() const;
+    double get_angular_velocity() const;
+    double get_omega() const;
 
     double get_rotation() const;
 
-    virtual void progress_over(const double dt) override;
-
-    bool is_point_within(const Eigen::Vector3d& p) const;
-
-    Eigen::Vector3d calculate_cartesian_effective_force_at(const Eigen::Vector3d& position) const;
-    Eigen::Vector3d calculate_cartesian_effective_force_at(const Eigen::Vector3d& position, double& magnitude) const;
-
+protected:
     // The longest dimension of the ellipsoid (distance).
-    const double alpha;
+    double alpha;
     // The intermediate dimension of the ellipsoid (distance).
-    const double beta;
+    double beta;
     // The smallest dimension of the ellipsoid (distance).
-    const double gamma;
+    double gamma;
 
     // The asteroid's density (mass per cubic distance).
-    const double density;
+    double density;
 
     // The asteroid's angular velocity, (about the smallest dimension)
     // (rotation per time).
-    const double angular_velocity;
+    double angular_velocity;
 
-    const double omega;
+    double omega;
 
-protected:
     // The current rotation/orientation, updated as time passes (rotation).
     double rotation;
 };

@@ -1,35 +1,30 @@
-#include "asteroid_mining/asteroid.hpp"
+#include "asteroid_mining/asteroid/originator.hpp"
 
+#include "asteroid_mining/constants.hpp"
 #include "asteroid_mining/math.hpp"
-
-#include <iostream>
 
 namespace asteroid_mining {
 
-Asteroid::Asteroid(
+AsteroidOriginator::AsteroidOriginator(
     const double beta_,
     const double gamma_,
     const double density_,
     const double rho_A,
     const double omega_bar
 ):
-    alpha(1.0),
-    beta(beta_),
-    gamma(gamma_),
-    density(density_),
-    angular_velocity(1.0),
-    omega(omega_bar / std::sqrt(4 * M_PI * math::G * rho_A * beta * gamma / 3))
+    AsteroidCarrier(
+        1.0,
+        beta_,
+        gamma_,
+        density_,
+        1.0,
+        omega_bar / std::sqrt(4 * M_PI * constants::G * rho_A * beta_ * gamma_ / 3),
+        0.0
+    )
 {
-    std::cout << "Asteroid characteristics:" << std::endl;
-    std::cout << "- alpha: " << alpha << std::endl;
-    std::cout << "- beta: " << beta << std::endl;
-    std::cout << "- gamma: " << gamma << std::endl;
-    std::cout << "- density: " << density << std::endl;
-    std::cout << "- angular velocity: " << angular_velocity << std::endl;
-    std::cout << "- omega: " << omega << std::endl;
 }
 
-Asteroid Asteroid::from_dimensioned_values(
+AsteroidOriginator AsteroidOriginator::from_dimensioned_values(
     const DimensionsScaler& dimensions_scaler,
     const double beta_bar,
     const double gamma_bar,
@@ -40,7 +35,7 @@ Asteroid Asteroid::from_dimensioned_values(
     using Soc = DimensionsScaler::ScaleOpChain;
     using Sf = DimensionsScaler::ScaleFactor;
     using Dt = Sf::DimensionType;
-    return Asteroid(
+    return AsteroidOriginator(
         dimensions_scaler.get_dimensionless(beta_bar, Soc() * Sf(Dt::DISTANCE)),
         dimensions_scaler.get_dimensionless(gamma_bar, Soc() * Sf(Dt::DISTANCE)),
         dimensions_scaler.get_dimensionless(rho_A, Soc() * Sf(Dt::MASS) / Sf(Dt::DISTANCE, 3)),
@@ -49,17 +44,17 @@ Asteroid Asteroid::from_dimensioned_values(
     );
 }
 
-double Asteroid::get_rotation() const
+const AsteroidCarrier& AsteroidOriginator::get_state() const
 {
-    return rotation;
+    return static_cast<const AsteroidCarrier&>(*this);
 }
 
-void Asteroid::progress_over(const double dt)
+void AsteroidOriginator::progress_over(const double dt)
 {
     rotation += (dt * angular_velocity);
 }
 
-bool Asteroid::is_point_within(const Eigen::Vector3d& p) const
+bool AsteroidOriginator::is_point_within(const Eigen::Vector3d& p) const
 {
     const double x = p.x() / alpha;
     const double y = p.y() / beta;
@@ -67,13 +62,13 @@ bool Asteroid::is_point_within(const Eigen::Vector3d& p) const
     return (x*x) + (y*y) + (z*z) + 1e-6 <= 1.0;
 }
 
-Eigen::Vector3d Asteroid::calculate_cartesian_effective_force_at(const Eigen::Vector3d& position) const
+Eigen::Vector3d AsteroidOriginator::calculate_cartesian_effective_force_at(const Eigen::Vector3d& position) const
 {
     double dummy;
     return calculate_cartesian_effective_force_at(position, dummy);
 }
 
-Eigen::Vector3d Asteroid::calculate_cartesian_effective_force_at(const Eigen::Vector3d& position, double& magnitude) const
+Eigen::Vector3d AsteroidOriginator::calculate_cartesian_effective_force_at(const Eigen::Vector3d& position, double& magnitude) const
 {
     const double lambda = ((position.squaredNorm() < 1e-6) ? 0 : math::calculate_confocal_ellipsoid_surface(
         beta,
