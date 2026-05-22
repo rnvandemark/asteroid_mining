@@ -1,7 +1,4 @@
-#include "asteroid_mining/asteroid.hpp"
-#include "asteroid_mining/dimensions_scaler.hpp"
 #include "asteroid_mining/model.hpp"
-#include "asteroid_mining/siphon.hpp"
 #include "asteroid_mining/view.hpp"
 
 #include <easy3d/util/initializer.h>
@@ -30,14 +27,14 @@ int main(int argc, char** argv)
     const unsigned int num_longitudinal_effective_force_markers = 20;
 
     asteroid_mining::DimensionsScaler dimensions_scaler(alpha_bar, bucket_mass + payload_mass, 1 / omega_bar);
-    asteroid_mining::Asteroid asteroid = asteroid_mining::Asteroid::from_dimensioned_values(
+    asteroid_mining::AsteroidOriginator asteroid = asteroid_mining::AsteroidOriginator::from_dimensioned_values(
         dimensions_scaler,
         beta_bar,
         gamma_bar,
         rho_bar,
         omega_bar
     );
-    asteroid_mining::Siphon siphon = asteroid_mining::Siphon::from_dimensioned_values(
+    asteroid_mining::SiphonOriginator siphon = asteroid_mining::SiphonOriginator::from_dimensioned_values(
         dimensions_scaler,
         asteroid,
         num_payloads_per_side,

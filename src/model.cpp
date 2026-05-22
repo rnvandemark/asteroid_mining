@@ -2,7 +2,7 @@
 
 namespace asteroid_mining {
 
-Model::Model(DimensionsScaler& dimensions_scaler_, Asteroid& asteroid_, Siphon& siphon_):
+Model::Model(DimensionsScaler& dimensions_scaler_, AsteroidOriginator& asteroid_, SiphonOriginator& siphon_):
     dimensions_scaler(dimensions_scaler_),
     asteroid(asteroid_),
     siphon(siphon_),
@@ -26,15 +26,15 @@ const DimensionsScaler& Model::get_dimensions_scaler() const
 {
     return dimensions_scaler;
 }
-const Asteroid& Model::get_asteroid() const
+const AsteroidOriginator& Model::get_asteroid() const
 {
     return asteroid;
 }
-const Siphon& Model::get_siphon() const
+const SiphonOriginator& Model::get_siphon() const
 {
     return siphon;
 }
-const ReleasedPayload& Model::get_released_payload() const
+const ReleasedPayloadOriginator& Model::get_released_payload() const
 {
     return released_payload;
 }
@@ -47,10 +47,10 @@ void Model::set_new_release_requested()
 void Model::release_new_payload()
 {
     const double theta = siphon.get_siphon_angular_position();
-    const double v_theta = siphon.chain_length * siphon.get_siphon_angular_velocity();
+    const double v_theta = siphon.get_chain_length() * siphon.get_siphon_angular_velocity();
     released_payload.release(
         siphon.get_cs_payload_mass(),
-        siphon.get_position_in_asteroid_frame(siphon.chain_length),
+        siphon.get_position_in_asteroid_frame(siphon.get_chain_length()),
         Eigen::Vector3d{-v_theta * std::sin(theta), v_theta * std::cos(theta), 0},
         Eigen::Vector3d{0, 0, 0}
     );

@@ -492,9 +492,9 @@ View::View(
         "asteroid",
         easy3d::SurfaceMeshFactory::icosphere(),
         easy3d::vec4(0.4, 0.4, 0, 1),
-        model.get_asteroid().alpha,
-        model.get_asteroid().beta,
-        model.get_asteroid().gamma
+        model.get_asteroid().get_alpha(),
+        model.get_asteroid().get_beta(),
+        model.get_asteroid().get_gamma()
     ),
     siphon_mesh(
         "siphon",
@@ -502,7 +502,7 @@ View::View(
         easy3d::vec4(0, 0, 1, 1),
         siphon_width,
         siphon_width,
-        model.get_siphon().chain_length
+        model.get_siphon().get_chain_length()
     ),
     collecting_satellite_mesh(
         "collecting satellite",
@@ -532,7 +532,7 @@ View::View(
     window.add_drawable(collecting_satellite_mesh.surface);
     window.add_drawable(released_payload_mesh.surface);
 
-    for (std::size_t i = 0; i < 2 * model.get_siphon().n; i++)
+    for (std::size_t i = 0; i < 2 * model.get_siphon().get_n(); i++)
     {
         const auto siphon_mass_mesh = DrawableMesh(
             "siphon mass/" + std::to_string(i),
@@ -618,8 +618,8 @@ bool View::render_model()
     const easy3d::Quat<float> q__universe__asteroid(easy3d::Vec<3, float>(0, 0, 1), asteroid.get_rotation());
     const easy3d::Quat<float> q__asteroid__universe = q__universe__asteroid.inverse();
     const easy3d::Mat4<float> T__universe__siphon_base = easy3d::Mat4<float>::rotation(q__universe__asteroid)
-        * easy3d::Mat4<float>::rotation(easy3d::Quat<float>(easy3d::Vec<3, float>(0, 0, 1), siphon.anchor_point_polar_angle))
-        * easy3d::Mat4<float>::translation(siphon.anchor_point_polar_radius, 0.0, 0.0)
+        * easy3d::Mat4<float>::rotation(easy3d::Quat<float>(easy3d::Vec<3, float>(0, 0, 1), siphon.get_anchor_point_polar_angle()))
+        * easy3d::Mat4<float>::translation(siphon.get_anchor_point_polar_radius(), 0.0, 0.0)
         * easy3d::Mat4<float>::rotation(easy3d::Quat<float>(easy3d::Vec<3, float>(0, 1, 0), M_PI/2))
         * easy3d::Mat4<float>::rotation(easy3d::Quat<float>(easy3d::Vec<3, float>(-1, 0, 0), siphon.get_siphon_angular_position()))
     ;
@@ -682,7 +682,7 @@ bool View::render_model()
         }
 
         // Transform the collecting satellite's mesh
-        const easy3d::Mat4<float> T__siphon_base__collecting_satellite = easy3d::Mat4<float>::translation(0, 0, siphon.chain_length);
+        const easy3d::Mat4<float> T__siphon_base__collecting_satellite = easy3d::Mat4<float>::translation(0, 0, siphon.get_chain_length());
         for (std::size_t i = 0; i < collecting_satellite_mesh.triangle_points.size(); i++)
         {
             const auto p = get_dimensioned(
@@ -702,7 +702,7 @@ bool View::render_model()
         std::vector<double> effective_force_magnitudes(siphon_mass_meshes.size());
         std::vector<bool> effective_force_is_positives(effective_force_marker_meshes.size());
 
-        const double net_siphon_chain_angle = siphon.anchor_point_polar_angle + siphon.get_siphon_angular_position();
+        const double net_siphon_chain_angle = siphon.get_anchor_point_polar_angle() + siphon.get_siphon_angular_position();
         const easy3d::vec2 net_siphon_direction(std::cos(net_siphon_chain_angle), std::sin(net_siphon_chain_angle));
         for (std::size_t i = 0; i < siphon_mass_meshes.size(); i++)
         {
@@ -943,7 +943,7 @@ bool View::render_model()
     if (window.corotating_camera_with_asteroid())
     {
         window.camera()->setPosition(easy3d::vec3(0, 0, model.get_dimensions_scaler().get_dimensioned(
-            3 * model.get_asteroid().alpha,
+            3 * model.get_asteroid().get_alpha(),
             DimensionsScaler::ScaleOpChain() * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::DISTANCE)
         )));
         window.camera()->setViewDirection(easy3d::vec3(0, 0, -1));
