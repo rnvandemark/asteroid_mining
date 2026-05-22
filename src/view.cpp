@@ -111,7 +111,6 @@ namespace asteroid_mining {
 
 AsteroidMiningViewer::AsteroidMiningViewer(
     const std::string& title,
-    const DimensionsScaler& dimensions_scaler_,
     Model& model_,
     const easy3d::vec4& bg_color,
     const int width,
@@ -131,7 +130,6 @@ AsteroidMiningViewer::AsteroidMiningViewer(
         width,
         height
     ),
-    dimensions_scaler(dimensions_scaler_),
     model(model_),
     time_per_second(TimePerSecond::SECONDS_ONE),
     show_effective_forces(true),
@@ -326,7 +324,7 @@ void AsteroidMiningViewer::post_draw()
 
     y += font_size * 1.5f * dpi_scaling();
     texter_->draw(
-        "Harvested material: " + std::to_string(math::round(dimensions_scaler.get_dimensioned(
+        "Harvested material: " + std::to_string(math::round(model.get_dimensions_scaler().get_dimensioned(
             model.get_siphon().get_cs_payload_mass(),
             DimensionsScaler::ScaleOpChain() * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::MASS)
         ), 3)) + " kg",
@@ -335,7 +333,7 @@ void AsteroidMiningViewer::post_draw()
 
     y += font_size * 1.5f * dpi_scaling();
     texter_->draw(
-        "Time elapsed between each mass: " + std::to_string(math::round(dimensions_scaler.get_dimensioned(
+        "Time elapsed between each mass: " + std::to_string(math::round(model.get_dimensions_scaler().get_dimensioned(
             model.get_siphon().get_time_elapsed_last_mass_to_reach_cs() / 60,
             DimensionsScaler::ScaleOpChain() * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::TIME)
         ), 3)) + " min",
@@ -353,7 +351,7 @@ void AsteroidMiningViewer::post_draw()
 
     y += font_size * 1.5f * dpi_scaling();
     texter_->draw(
-        "- angular velocity: " + std::to_string(math::round(dimensions_scaler.get_dimensioned(
+        "- angular velocity: " + std::to_string(math::round(model.get_dimensions_scaler().get_dimensioned(
             model.get_siphon().get_siphon_angular_velocity(),
             DimensionsScaler::ScaleOpChain() / DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::TIME)
         ) * 1e3 * 180 / M_PI, 3)) + " mdeg/s",
@@ -362,7 +360,7 @@ void AsteroidMiningViewer::post_draw()
 
     y += font_size * 1.5f * dpi_scaling();
     texter_->draw(
-        "- angular acceleration: " + std::to_string(math::round(dimensions_scaler.get_dimensioned(
+        "- angular acceleration: " + std::to_string(math::round(model.get_dimensions_scaler().get_dimensioned(
             model.get_siphon().get_siphon_angular_acceleration(),
             DimensionsScaler::ScaleOpChain() / DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::TIME, 2)
         ) * 1e6 * 180 / M_PI, 3)) + " μdeg/s^2",
@@ -395,16 +393,16 @@ void AsteroidMiningViewer::post_draw()
             const auto chain = DimensionsScaler::ScaleOpChain()
                 * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::DISTANCE)
             ;
-            return "-- position: [" + std::to_string(math::round(dimensions_scaler.get_dimensioned(p__frame.x, chain) / 1000, 3))
-                + ", " + std::to_string(math::round(dimensions_scaler.get_dimensioned(p__frame.y, chain) / 1000, 3))
-                + ", " + std::to_string(math::round(dimensions_scaler.get_dimensioned(p__frame.z, chain) / 1000, 3)) + "] km"
+            return "-- position: [" + std::to_string(math::round(model.get_dimensions_scaler().get_dimensioned(p__frame.x, chain) / 1000, 3))
+                + ", " + std::to_string(math::round(model.get_dimensions_scaler().get_dimensioned(p__frame.y, chain) / 1000, 3))
+                + ", " + std::to_string(math::round(model.get_dimensions_scaler().get_dimensioned(p__frame.z, chain) / 1000, 3)) + "] km"
             ;
         };
 
         const auto stringify_v = [this] (const easy3d::vec3& v__frame) -> std::string
         {
             const double norm = v__frame.norm();
-            return "-- velocity: " + std::to_string(math::round(dimensions_scaler.get_dimensioned(
+            return "-- velocity: " + std::to_string(math::round(model.get_dimensions_scaler().get_dimensioned(
                     norm,
                     DimensionsScaler::ScaleOpChain()
                         * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::DISTANCE)
@@ -478,16 +476,14 @@ View::DrawableMesh::DrawableMesh(
 }
 
 View::View(
-    const DimensionsScaler& dimensions_scaler_,
     Model& model_,
     const double siphon_width_,
     const unsigned int num_latitudinal_effective_force_marker_rings_,
     const unsigned int num_longitudinal_effective_force_markers_
 ):
-    window("Triaxial Ellipsoid Viewer", dimensions_scaler_, model_),
-    dimensions_scaler(dimensions_scaler_),
+    window("Triaxial Ellipsoid Viewer", model_),
     model(model_),
-    siphon_width(dimensions_scaler.get_dimensionless(
+    siphon_width(model.get_dimensions_scaler().get_dimensionless(
         siphon_width_, DimensionsScaler::ScaleOpChain() * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::DISTANCE)
     )),
     num_latitudinal_effective_force_marker_rings(num_latitudinal_effective_force_marker_rings_),
@@ -542,13 +538,13 @@ View::View(
             "siphon mass/" + std::to_string(i),
             create_cube_mesh(),
             easy3d::vec4(0, 0, 0, 1),
-            dimensions_scaler.get_dimensionless(
+            model.get_dimensions_scaler().get_dimensionless(
                 5, DimensionsScaler::ScaleOpChain() * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::DISTANCE)
             ),
-            dimensions_scaler.get_dimensionless(
+            model.get_dimensions_scaler().get_dimensionless(
                 5, DimensionsScaler::ScaleOpChain() * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::DISTANCE)
             ),
-            dimensions_scaler.get_dimensionless(
+            model.get_dimensions_scaler().get_dimensionless(
                 5, DimensionsScaler::ScaleOpChain() * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::DISTANCE)
             )
         );
@@ -565,13 +561,13 @@ View::View(
                 "effective force marker/" + std::to_string(latitude) + "/" + std::to_string(longitude),
                 create_arrow_mesh(),
                 easy3d::vec4(0, 0, 0, 1),
-                dimensions_scaler.get_dimensionless(
+                model.get_dimensions_scaler().get_dimensionless(
                     5, DimensionsScaler::ScaleOpChain() * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::DISTANCE)
                 ),
-                dimensions_scaler.get_dimensionless(
+                model.get_dimensions_scaler().get_dimensionless(
                     5, DimensionsScaler::ScaleOpChain() * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::DISTANCE)
                 ),
-                dimensions_scaler.get_dimensionless(
+                model.get_dimensions_scaler().get_dimensionless(
                     15, DimensionsScaler::ScaleOpChain() * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::DISTANCE)
                 )
             );
@@ -594,9 +590,9 @@ int View::run()
 easy3d::vec3 View::get_dimensioned(const easy3d::vec3& dimensionless, const DimensionsScaler::ScaleOpChain& chain) const
 {
     return easy3d::vec3(
-        dimensions_scaler.get_dimensioned(dimensionless.x, chain),
-        dimensions_scaler.get_dimensioned(dimensionless.y, chain),
-        dimensions_scaler.get_dimensioned(dimensionless.z, chain)
+        model.get_dimensions_scaler().get_dimensioned(dimensionless.x, chain),
+        model.get_dimensions_scaler().get_dimensioned(dimensionless.y, chain),
+        model.get_dimensions_scaler().get_dimensioned(dimensionless.z, chain)
     );
 }
 
@@ -604,7 +600,7 @@ bool View::animation_callback()
 {
     const auto now = std::chrono::system_clock::now();
     const double dt = std::chrono::duration<double>(now - last_animation_time).count();
-    model.progress_over(window.get_time_rate() * dimensions_scaler.get_dimensionless(
+    model.progress_over(window.get_time_rate() * model.get_dimensions_scaler().get_dimensionless(
         dt,
         DimensionsScaler::ScaleOpChain() * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::TIME)
     ));
@@ -946,7 +942,7 @@ bool View::render_model()
 
     if (window.corotating_camera_with_asteroid())
     {
-        window.camera()->setPosition(easy3d::vec3(0, 0, dimensions_scaler.get_dimensioned(
+        window.camera()->setPosition(easy3d::vec3(0, 0, model.get_dimensions_scaler().get_dimensioned(
             3 * model.get_asteroid().alpha,
             DimensionsScaler::ScaleOpChain() * DimensionsScaler::ScaleFactor(DimensionsScaler::ScaleFactor::DimensionType::DISTANCE)
         )));

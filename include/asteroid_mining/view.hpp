@@ -1,6 +1,5 @@
 #pragma once
 
-#include "asteroid_mining/dimensions_scaler.hpp"
 #include "asteroid_mining/model.hpp"
 
 #include <easy3d/core/surface_mesh.h>
@@ -29,7 +28,6 @@ public:
 
     AsteroidMiningViewer(
         const std::string& title,
-        const DimensionsScaler& dimensions_scaler_,
         Model& model_,
         const easy3d::vec4& bg_color = easy3d::vec4(0, 0, 0, 1),
         const int width = 1600,
@@ -53,7 +51,6 @@ protected:
 
     virtual void post_draw() override;
 
-    const DimensionsScaler& dimensions_scaler;
     Model& model;
 
     TimePerSecond time_per_second;
@@ -87,7 +84,6 @@ protected:
 
 public:
     View(
-        const DimensionsScaler& dimensions_scaler_,
         Model& model_,
         const double siphon_width_,
         const unsigned int num_latitudinal_effective_force_marker_rings_,
@@ -105,7 +101,6 @@ protected:
 
     AsteroidMiningViewer window;
 
-    const DimensionsScaler& dimensions_scaler;
     Model& model;
 
     const double siphon_width;

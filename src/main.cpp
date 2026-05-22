@@ -30,7 +30,6 @@ int main(int argc, char** argv)
     const unsigned int num_longitudinal_effective_force_markers = 20;
 
     asteroid_mining::DimensionsScaler dimensions_scaler(alpha_bar, bucket_mass + payload_mass, 1 / omega_bar);
-
     asteroid_mining::Asteroid asteroid = asteroid_mining::Asteroid::from_dimensioned_values(
         dimensions_scaler,
         beta_bar,
@@ -52,11 +51,10 @@ int main(int argc, char** argv)
         initial_bottom_lifting_side_mass_position,
         initial_bottom_lifting_side_mass_velocity
     );
-    asteroid_mining::Model model(asteroid, siphon);
+    asteroid_mining::Model model(dimensions_scaler, asteroid, siphon);
 
     easy3d::initialize();
     return asteroid_mining::View(
-        dimensions_scaler,
         model,
         siphon_width,
         num_latitudinal_effective_force_marker_rings,

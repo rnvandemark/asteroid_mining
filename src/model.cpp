@@ -2,7 +2,8 @@
 
 namespace asteroid_mining {
 
-Model::Model(Asteroid& asteroid_, Siphon& siphon_):
+Model::Model(DimensionsScaler& dimensions_scaler_, Asteroid& asteroid_, Siphon& siphon_):
+    dimensions_scaler(dimensions_scaler_),
     asteroid(asteroid_),
     siphon(siphon_),
     released_payload(asteroid),
@@ -21,6 +22,10 @@ void Model::progress_over(const double dt)
     released_payload.progress_over(dt);
 }
 
+const DimensionsScaler& Model::get_dimensions_scaler() const
+{
+    return dimensions_scaler;
+}
 const Asteroid& Model::get_asteroid() const
 {
     return asteroid;
