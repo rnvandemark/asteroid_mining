@@ -8,8 +8,6 @@
 
 namespace asteroid_mining { namespace math {
 
-const double G = 6.67e-11;
-
 // DISCLAIMER: this is copy and paste from Boost
 // (https://github.com/boostorg/math/blob/develop/include/boost/math/tools/cubic_roots.hpp)
 // because it was introduced in a newer version that I don't have access to :(
