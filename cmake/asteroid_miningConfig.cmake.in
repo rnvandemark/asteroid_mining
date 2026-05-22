@@ -1,0 +1,6 @@
+include(CMakeFindDependencyMacro)
+find_dependency(Boost REQUIRED)
+find_dependency(Easy3D REQUIRED COMPONENTS algo core renderer viewer)
+find_dependency(Eigen3 REQUIRED)
+
+include("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Targets.cmake")
