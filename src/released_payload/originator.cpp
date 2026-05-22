@@ -1,48 +1,21 @@
-#include "asteroid_mining/released_payload.hpp"
+#include "asteroid_mining/released_payload/originator.hpp"
 
 #include <iostream>
 
 namespace asteroid_mining {
 
-ReleasedPayload::ReleasedPayload(const Asteroid& asteroid_):
-    asteroid(asteroid_),
-    active(false),
-    mass(0.0),
-    position(),
-    velocity(),
-    acceleration()
+ReleasedPayloadOriginator::ReleasedPayloadOriginator(const AsteroidOriginator& asteroid_):
+    ReleasedPayloadCarrier(),
+    asteroid(asteroid_)
 {
 }
 
-bool ReleasedPayload::is_active() const
+const ReleasedPayloadCarrier& ReleasedPayloadOriginator::get_state() const
 {
-    return active;
+    return static_cast<const ReleasedPayloadCarrier&>(*this);
 }
 
-const Eigen::Vector3d& ReleasedPayload::get_position() const
-{
-    return position;
-}
-const Eigen::Vector3d& ReleasedPayload::get_velocity() const
-{
-    return velocity;
-}
-
-void ReleasedPayload::release(
-    const double mass_,
-    const Eigen::Vector3d& position_,
-    const Eigen::Vector3d& velocity_,
-    const Eigen::Vector3d& acceleration_
-)
-{
-    mass = mass_;
-    position = position_;
-    velocity = velocity_;
-    acceleration = acceleration_;
-    active = true;
-}
-
-void ReleasedPayload::progress_over(const double dt)
+void ReleasedPayloadOriginator::progress_over(const double dt)
 {
     if (active)
     {
@@ -72,6 +45,20 @@ void ReleasedPayload::progress_over(const double dt)
             active = false;
         }
     }
+}
+
+void ReleasedPayloadOriginator::release(
+    const double mass_,
+    const Eigen::Vector3d& position_,
+    const Eigen::Vector3d& velocity_,
+    const Eigen::Vector3d& acceleration_
+)
+{
+    mass = mass_;
+    position = position_;
+    velocity = velocity_;
+    acceleration = acceleration_;
+    active = true;
 }
 
 }
