@@ -1,14 +1,13 @@
-#include "asteroid_mining/siphon.hpp"
+#include "asteroid_mining/siphon/originator.hpp"
 
 #include "asteroid_mining/math.hpp"
 
 #include <cmath>
-#include <iostream>
 
 namespace asteroid_mining {
 
-Siphon::Siphon(
-    const Asteroid& asteroid_,
+SiphonOriginator::SiphonOriginator(
+    const AsteroidOriginator& asteroid_,
     const unsigned int n_,
     const double chain_length_,
     const double bucket_mass_,
@@ -20,51 +19,40 @@ Siphon::Siphon(
     const double initial_bottom_lifting_side_mass_position,
     const double initial_bottom_lifting_side_mass_velocity
 ):
-    asteroid(asteroid_),
-    n(n_),
-    chain_length(chain_length_),
-    bucket_mass(bucket_mass_),
-    payload_mass(payload_mass_),
-    lifting_side_mass(bucket_mass + payload_mass),
-    descending_side_mass(bucket_mass),
-    cs_dry_mass(cs_dry_mass_),
-    anchor_point_polar_angle(anchor_point_polar_angle_),
-    anchor_point_polar_radius(asteroid.beta / std::sqrt(1 - ((1 - std::pow(asteroid.beta, 2)) * std::pow(std::cos(anchor_point_polar_angle), 2)))),
-    max_bottom_lifting_side_mass_position(chain_length / n),
-    siphon_angular_position(initial_siphon_angular_position),
-    siphon_angular_velocity(initial_siphon_angular_velocity),
-    siphon_angular_acceleration(0.0),
-    bottom_lifting_side_mass_position(initial_bottom_lifting_side_mass_position),
-    bottom_lifting_side_mass_velocity(initial_bottom_lifting_side_mass_velocity),
-    bottom_lifting_side_mass_acceleration(0.0),
-    cs_payload_mass(0.0),
-    total_time_elapsed(0.0),
-    time_mass_reached_cs_last(0.0),
-    time_elapsed_last_mass_to_reach_cs(0.0),
-    last_siphon_angular_velocity_was_positive(false),
-    last_min_siphon_angular_position_reached(0.0),
-    last_max_siphon_angular_position_reached(0.0),
-    mass_positions(n),
-    mass_effective_forces(n)
+    SiphonCarrier(
+        n_,
+        chain_length_,
+        bucket_mass_,
+        payload_mass_,
+        bucket_mass_ + payload_mass_,
+        bucket_mass_,
+        cs_dry_mass_,
+        anchor_point_polar_angle_,
+        asteroid_.get_beta() / std::sqrt(1 - ((1 - std::pow(asteroid_.get_beta(), 2)) * std::pow(std::cos(anchor_point_polar_angle_), 2))),
+        chain_length_ / n_,
+        initial_siphon_angular_position,
+        initial_siphon_angular_velocity,
+        0.0,
+        initial_bottom_lifting_side_mass_position,
+        initial_bottom_lifting_side_mass_velocity,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        false,
+        0.0,
+        0.0,
+        std::vector<double>(n_),
+        std::vector<Eigen::Vector3d>(n_)
+    ),
+    asteroid(asteroid_)
 {
-    std::cout << "Siphon characteristics:" << std::endl;
-    std::cout << "- number of payloads on each side: " << n << std::endl;
-    std::cout << "- chain length: " << chain_length << std::endl;
-    std::cout << "- max mass position: " << max_bottom_lifting_side_mass_position << std::endl;
-    std::cout << "- bucket mass: " << bucket_mass << std::endl;
-    std::cout << "- payload mass: " << payload_mass << std::endl;
-    std::cout << "- CS dry mass: " << cs_dry_mass << std::endl;
-    std::cout << "- anchor point angle: " << (anchor_point_polar_angle * 180 / M_PI) << std::endl;
-    std::cout << "- anchor point radius: " << anchor_point_polar_radius << std::endl;
-    std::cout << "- init siphon angular position: " << siphon_angular_position << std::endl;
-    std::cout << "- init siphon angular velocity: " << siphon_angular_velocity << std::endl;
-    std::cout << "- init mass position: " << bottom_lifting_side_mass_position << std::endl;
-    std::cout << "- init mass velocity: " << bottom_lifting_side_mass_velocity << std::endl;
 }
 
-Siphon Siphon::from_dimensioned_values(
+SiphonOriginator SiphonOriginator::from_dimensioned_values(
     const DimensionsScaler& dimensions_scaler,
-    const Asteroid& asteroid,
+    const AsteroidOriginator& asteroid,
     const unsigned int n,
     const double chain_length,
     const double bucket_mass,
@@ -80,7 +68,7 @@ Siphon Siphon::from_dimensioned_values(
     using Soc = DimensionsScaler::ScaleOpChain;
     using Sf = DimensionsScaler::ScaleFactor;
     using Dt = Sf::DimensionType;
-    return Siphon(
+    return SiphonOriginator(
         asteroid,
         n,
         dimensions_scaler.get_dimensionless(chain_length, Soc() * Sf(Dt::DISTANCE)),
@@ -95,62 +83,17 @@ Siphon Siphon::from_dimensioned_values(
     );
 }
 
-double Siphon::get_siphon_angular_position() const
+const SiphonCarrier& SiphonOriginator::get_state() const
 {
-    return siphon_angular_position;
+    return static_cast<const SiphonCarrier&>(*this);
 }
 
-double Siphon::get_siphon_angular_velocity() const
-{
-    return siphon_angular_velocity;
-}
-
-double Siphon::get_siphon_angular_acceleration() const
-{
-    return siphon_angular_acceleration;
-}
-
-double Siphon::get_cs_payload_mass() const
-{
-    return cs_payload_mass;
-}
-
-double Siphon::get_time_elapsed_last_mass_to_reach_cs() const
-{
-    return time_elapsed_last_mass_to_reach_cs;
-}
-
-double Siphon::get_last_min_siphon_angular_position_reached() const
-{
-    return last_min_siphon_angular_position_reached;
-}
-
-double Siphon::get_last_max_siphon_angular_position_reached() const
-{
-    return last_max_siphon_angular_position_reached;
-}
-
-bool Siphon::get_mass_is_lifting(const unsigned int i) const
-{
-    return i < n;
-}
-
-double Siphon::get_mass_position(const unsigned int i) const
-{
-    return mass_positions[i];
-}
-
-const Eigen::Vector3d& Siphon::get_mass_effective_force(const unsigned int i) const
-{
-    return mass_effective_forces[i];
-}
-
-void Siphon::clear_cs_payload_mass()
+void SiphonOriginator::clear_cs_payload_mass()
 {
     cs_payload_mass = 0.0;
 }
 
-void Siphon::progress_over(const double dt)
+void SiphonOriginator::progress_over(const double dt)
 {
     const double last_siphon_angular_position = siphon_angular_position;
 
@@ -187,7 +130,7 @@ void Siphon::progress_over(const double dt)
         mass_effective_forces[m] = calculate_cartesian_effective_force_on_chain_at(mass_positions[m]);
     }
 
-    const double net_chain_angle = anchor_point_polar_angle + siphon_angular_position;
+    const double net_chain_angle = get_net_chain_angle();
     const double cs_total_mass = cs_payload_mass + cs_dry_mass;
     const auto cs_effective_force = calculate_cartesian_effective_force_on_chain_at(chain_length);
 
@@ -248,9 +191,9 @@ void Siphon::progress_over(const double dt)
     }
 }
 
-Eigen::Vector3d Siphon::get_position_in_asteroid_frame(const double chain_position) const
+Eigen::Vector3d SiphonOriginator::get_position_in_asteroid_frame(const double chain_position) const
 {
-    const double net_chain_angle = anchor_point_polar_angle + siphon_angular_position;
+    const double net_chain_angle = get_net_chain_angle();
     return Eigen::Vector3d{
         (anchor_point_polar_radius * std::cos(anchor_point_polar_angle)) + (chain_position * std::cos(net_chain_angle)),
         (anchor_point_polar_radius * std::sin(anchor_point_polar_angle)) + (chain_position * std::sin(net_chain_angle)),
@@ -258,13 +201,13 @@ Eigen::Vector3d Siphon::get_position_in_asteroid_frame(const double chain_positi
     };
 }
 
-Eigen::Vector3d Siphon::calculate_cartesian_effective_force_on_chain_at(const double chain_position) const
+Eigen::Vector3d SiphonOriginator::calculate_cartesian_effective_force_on_chain_at(const double chain_position) const
 {
     double dummy;
     return calculate_cartesian_effective_force_on_chain_at(chain_position, dummy);
 }
 
-Eigen::Vector3d Siphon::calculate_cartesian_effective_force_on_chain_at(const double chain_position, double& magnitude) const
+Eigen::Vector3d SiphonOriginator::calculate_cartesian_effective_force_on_chain_at(const double chain_position, double& magnitude) const
 {
     return asteroid.calculate_cartesian_effective_force_at(get_position_in_asteroid_frame(chain_position), magnitude);
 }
