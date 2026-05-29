@@ -25,14 +25,14 @@ browser, the raw files in the `docs/media` directory are clearer.
 The below clips are from a simulation of an asteroid model with the following
 characteristics:
 - Asteroid dimensions: 280 km x 140 km x 140 km
-- Asteroid density: 2500 km/m^3
+- Asteroid density: 2500 kg/m^3
 - Asteroid rotational velocity: ~3.5E-4 rad/s
 - Payloads per side of siphon: 35
 - Siphon chain length: 270 km
 - Bucket mass: 5 kg
 - Payload mass: 20 kg
 - Collecting satellite dry mass: 2000 kg
-- Anchor point polar angle: pi/6
+- Anchor point polar angle: pi/6 rad
 - Initial siphon angular position: 0 rad
 - Initial siphon angular velocity: 0 rad/s
 - Initial bottom lifting side mass position: 0 km
