@@ -135,14 +135,14 @@ install(
     EXPORT export_${PROJECT_NAME}
     FILE "${PROJECT_NAME}Targets.cmake"
     NAMESPACE ${PROJECT_NAME}::
-    DESTINATION share/${PROJECT_NAME}/cmake
+    DESTINATION lib/cmake/${PROJECT_NAME}
 )
 configure_package_config_file(
     "${PROJECT_SOURCE_DIR}/cmake/${PROJECT_NAME}Config.cmake.in"
     "${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
-    INSTALL_DESTINATION share/${PROJECT_NAME}/cmake
+    INSTALL_DESTINATION lib/cmake/${PROJECT_NAME}
 )
 install(FILES
     "${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
-    DESTINATION share/${PROJECT_NAME}/cmake
+    DESTINATION lib/cmake/${PROJECT_NAME}
 )
