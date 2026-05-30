@@ -58,7 +58,7 @@ SiphonCarrier::SiphonCarrier(
     const double last_min_siphon_angular_position_reached_,
     const double last_max_siphon_angular_position_reached_,
     const std::vector<double>& mass_positions_,
-    const std::vector<Eigen::Vector3d>& mass_effective_forces_
+    const SiphonCarrier::MassEffectiveForceT& mass_effective_forces_
 ):
     n(n_),
     chain_length(chain_length_),

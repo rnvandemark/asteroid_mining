@@ -9,6 +9,9 @@ class SiphonCarrier
     friend class SiphonMemento;
 
 public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    using MassEffectiveForceT = std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d>>;
+
     SiphonCarrier();
 
     SiphonCarrier(
@@ -36,7 +39,7 @@ public:
         const double last_min_siphon_angular_position_reached_,
         const double last_max_siphon_angular_position_reached_,
         const std::vector<double>& mass_positions_,
-        const std::vector<Eigen::Vector3d>& mass_effective_forces_
+        const MassEffectiveForceT& mass_effective_forces_
     );
 
     unsigned int get_n() const;
@@ -116,7 +119,7 @@ protected:
     double last_max_siphon_angular_position_reached;
 
     std::vector<double> mass_positions;
-    std::vector<Eigen::Vector3d> mass_effective_forces;
+    MassEffectiveForceT mass_effective_forces;
 };
 
 }

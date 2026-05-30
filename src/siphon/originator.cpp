@@ -43,8 +43,8 @@ SiphonOriginator::SiphonOriginator(
         false,
         0.0,
         0.0,
-        std::vector<double>(n_),
-        std::vector<Eigen::Vector3d>(n_)
+        std::vector<double>(2*n_),
+        SiphonCarrier::MassEffectiveForceT(2*n_)
     ),
     asteroid(asteroid_)
 {
