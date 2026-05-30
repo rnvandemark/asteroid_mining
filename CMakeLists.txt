@@ -5,7 +5,6 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Boost REQUIRED)
-find_package(Easy3D REQUIRED COMPONENTS algo core renderer util viewer)
 find_package(Eigen3 REQUIRED)
 
 include_directories(include)
@@ -74,32 +73,6 @@ target_include_directories(${PROJECT_NAME}_model PUBLIC
     $<INSTALL_INTERFACE:include>
 )
 
-add_library(${PROJECT_NAME}_view SHARED src/view.cpp)
-target_link_libraries(${PROJECT_NAME}_view PUBLIC
-    easy3d::algo
-    easy3d::renderer
-    easy3d::viewer
-    ${PROJECT_NAME}_model
-)
-target_include_directories(${PROJECT_NAME}_view PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-)
-
-###############################################################################
-# Build executable
-###############################################################################
-
-add_executable(${PROJECT_NAME}_main src/main.cpp)
-target_link_libraries(${PROJECT_NAME}_main PUBLIC
-    ${PROJECT_NAME}_view
-    easy3d::util
-)
-target_include_directories(${PROJECT_NAME}_main PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-)
-
 ###############################################################################
 # Install everything
 ###############################################################################
@@ -111,15 +84,11 @@ install(TARGETS
     ${PROJECT_NAME}_mementos
     ${PROJECT_NAME}_originators
     ${PROJECT_NAME}_model
-    ${PROJECT_NAME}_view
     EXPORT export_${PROJECT_NAME}
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
     RUNTIME DESTINATION bin
     INCLUDES DESTINATION include
-)
-install(TARGETS ${PROJECT_NAME}_main
-    RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
 install(
     DIRECTORY include/
